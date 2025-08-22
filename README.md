@@ -6,7 +6,7 @@
 
 **Olho Verde** é um projeto de engenharia de software que visa criar uma plataforma web colaborativa para o mapeamento de problemas urbanos na cidade de São Paulo. Inspirado em modelos de *crowdsourcing* como o Waze, o sistema permitirá que os cidadãos reportem, de forma geolocalizada, questões que afetam a sustentabilidade e a qualidade de vida na cidade.
 
-Este projeto está sendo desenvolvido como parte da disciplina de Engenharia de Software, utilizando a metodologia ágil **Scrum**.
+Este projeto está sendo desenvolvido como parte da disciplina de MAC0332 - Engenharia de Software, utilizando a metodologia ágil **Scrum**.
 
 ## 2. O Problema
 
@@ -28,7 +28,7 @@ Nossa plataforma permitirá que um usuário cadastrado possa:
 *   Visualizar os reports de outros usuários.
 *   Votar em um report para indicar se o problema ainda persiste ou se foi solucionado.
 
-A principal API utilizada para esta funcionalidade será a **API do Google Maps**.
+A principal API utilizada para esta funcionalidade será a **API do OpenStreetMap**.
 
 ## 4. Documentação do Projeto
 
