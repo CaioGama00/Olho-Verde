@@ -1,0 +1,75 @@
+/* General App Layout */
+.app-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.app-header {
+  background-color: #2c3e50;
+  color: white;
+  padding: 10px 20px;
+  text-align: center;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  z-index: 1001; /* Above map */
+}
+
+.app-header h1 {
+  margin: 0;
+  font-size: 1.5em;
+}
+
+.map-area {
+  flex-grow: 1;
+}
+
+/* Custom Leaflet Icons */
+.custom-icon-container {
+  background-color: #e74c3c;
+  border-radius: 50%;
+  color: white;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 30px;
+  height: 30px;
+  font-size: 16px;
+  box-shadow: 0 0 5px rgba(0,0,0,0.5);
+  border: 2px solid white;
+}
+
+/* Custom Popup Styles */
+.leaflet-popup-content-wrapper {
+  border-radius: 8px;
+}
+
+.leaflet-popup-content {
+  margin: 12px !important;
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+}
+
+.popup-content h4 {
+  margin: 0 0 8px 0;
+  color: #34495e;
+  border-bottom: 1px solid #ecf0f1;
+  padding-bottom: 4px;
+}
+
+.popup-content p {
+  margin: 0 0 12px 0;
+}
+
+.report-button {
+  background-color: #3498db;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  width: 100%;
+  font-size: 1em;
+}
+
+.report-button:hover {
+  background-color: #2980b9;
+}

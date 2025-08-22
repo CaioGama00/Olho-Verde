@@ -1,0 +1,34 @@
+{
+  "reports": [
+    {
+      "id": 1663330520001,
+      "problem": "Foco de lixo",
+      "position": {
+        "lat": -23.55052,
+        "lng": -46.633308
+      },
+      "upvotes": 10,
+      "downvotes": 2
+    },
+    {
+      "id": 1663330520002,
+      "problem": "Alagamento",
+      "position": {
+        "lat": -23.551,
+        "lng": -46.634
+      },
+      "upvotes": 5,
+      "downvotes": 0
+    },
+    {
+      "id": 1663330520003,
+      "problem": "Árvores prestes a cair",
+      "position": {
+        "lat": -23.550,
+        "lng": -46.635
+      },
+      "upvotes": 20,
+      "downvotes": 1
+    }
+  ]
+}
