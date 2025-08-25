@@ -1,24 +1,24 @@
 # Olho-Verde Frontend
 
-This folder contains the frontend of the Olho-Verde project.
+Esta pasta contém o frontend do projeto Olho-Verde.
 
-## Running the frontend
+## Executando o frontend
 
-To run the frontend application, follow these steps:
+Para executar a aplicação frontend, siga estas etapas:
 
-1.  Navigate to the `frontend` directory:
+1.  Navegue até o diretório `frontend`:
     ```bash
     cd frontend
     ```
 
-2.  Install the dependencies:
+2.  Instale as dependências:
     ```bash
     npm install
     ```
 
-3.  Start the development server:
+3.  Inicie o servidor de desenvolvimento:
     ```bash
     npm run dev
     ```
 
-The application will be available at `http://localhost:5173` (or another port if 5173 is busy).
+A aplicação estará disponível em `http://localhost:5173` (ou outra porta, se a 5173 estiver ocupada).

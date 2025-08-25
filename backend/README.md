@@ -1,24 +1,24 @@
 # Olho-Verde Backend
 
-This folder contains the backend of the Olho-Verde project.
+Esta pasta contém o backend do projeto Olho-Verde.
 
-## Running the backend
+## Executando o backend
 
-To run the backend server, follow these steps:
+Para executar o servidor backend, siga estas etapas:
 
-1.  Navigate to the `backend` directory:
+1.  Navegue até o diretório `backend`:
     ```bash
     cd backend
     ```
 
-2.  Install the dependencies:
+2.  Instale as dependências:
     ```bash
     npm install
     ```
 
-3.  Start the server:
+3.  Inicie o servidor:
     ```bash
     npm start
     ```
 
-The server will be running on `http://localhost:3001`.
+O servidor estará em execução em `http://localhost:3001`.
