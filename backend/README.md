@@ -1,24 +1,17 @@
-# Olho-Verde Backend
+# Backend Olho Verde
 
-Esta pasta contém o backend do projeto Olho-Verde.
+Este diretório contém o código-fonte para o backend do projeto Olho Verde.
 
-## Executando o backend
+## Como Executar
 
-Para executar o servidor backend, siga estas etapas:
+1. **Instale as dependências:**
+   ```bash
+   npm install
+   ```
 
-1.  Navegue até o diretório `backend`:
-    ```bash
-    cd backend
-    ```
-
-2.  Instale as dependências:
-    ```bash
-    npm install
-    ```
-
-3.  Inicie o servidor:
-    ```bash
-    npm start
-    ```
+2. **Inicie o servidor:**
+   ```bash
+   npm start
+   ```
 
 O servidor estará em execução em `http://localhost:3001`.

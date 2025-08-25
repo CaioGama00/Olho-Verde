@@ -1,4 +1,19 @@
-/* General App Layout */
+:root {
+  --primary-color: #28a745; /* Green */
+  --secondary-color: #218838; /* Darker Green */
+  --light-gray: #f0f2f5;
+  --dark-gray: #333;
+  --text-color: #555;
+  --white: #fff;
+  --shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  margin: 0;
+  background-color: var(--light-gray);
+}
+
 .app-container {
   display: flex;
   flex-direction: column;
@@ -6,21 +21,76 @@
 }
 
 .app-header {
-  background-color: #2c3e50;
-  color: white;
-  padding: 10px 20px;
-  text-align: center;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-  z-index: 1001; /* Above map */
+  background-color: var(--primary-color); /* Green background */
+  color: var(--white); /* White text */
+  padding: 1rem 2rem; /* Increased padding */
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  z-index: 1001;
+}
+
+.app-logo-container {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem; /* Space between logo and text */
+}
+
+.app-logo {
+  font-size: 2rem; /* Adjust size as needed */
+  color: var(--white); /* Ensure logo is white */
 }
 
 .app-header h1 {
   margin: 0;
-  font-size: 1.5em;
+  font-size: 1.75rem;
+  color: var(--white); /* White text */
 }
 
 .map-area {
   flex-grow: 1;
+}
+
+/* Navbar styles */
+nav {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+nav a, nav button {
+  text-decoration: none;
+  color: var(--white); /* White text */
+  font-weight: 600;
+  padding: 0.75rem 1.25rem; /* Increased padding */
+  border-radius: 4px;
+  transition: background-color 0.3s, color 0.3s;
+}
+
+nav a:hover {
+  background-color: var(--secondary-color);
+}
+
+nav div {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+nav span {
+    font-weight: 600;
+}
+
+nav button {
+  border: none;
+  background-color: var(--secondary-color); /* Darker green for buttons */
+  color: var(--white);
+  cursor: pointer;
+}
+
+nav button:hover {
+  background-color: #1e7e34;
 }
 
 /* Custom Leaflet Icons */
@@ -41,35 +111,75 @@
 /* Custom Popup Styles */
 .leaflet-popup-content-wrapper {
   border-radius: 8px;
+  box-shadow: var(--shadow);
 }
 
 .leaflet-popup-content {
-  margin: 12px !important;
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  margin: 1rem !important;
+  font-family: inherit;
 }
 
 .popup-content h4 {
-  margin: 0 0 8px 0;
-  color: #34495e;
+  margin: 0 0 0.75rem 0;
+  color: var(--primary-color);
   border-bottom: 1px solid #ecf0f1;
-  padding-bottom: 4px;
+  padding-bottom: 0.5rem;
+  font-size: 1.1rem;
 }
 
 .popup-content p {
-  margin: 0 0 12px 0;
+  margin: 0 0 1rem 0;
 }
 
 .report-button {
-  background-color: #3498db;
+  background-color: var(--primary-color);
   color: white;
   border: none;
-  padding: 8px 12px;
+  padding: 0.6rem 1.2rem;
   border-radius: 4px;
   cursor: pointer;
   width: 100%;
-  font-size: 1em;
+  font-size: 1rem;
+  font-weight: 600;
+  transition: background-color 0.3s;
 }
 
 .report-button:hover {
-  background-color: #2980b9;
+  background-color: var(--secondary-color);
+}
+
+/* Vote controls */
+.vote-controls {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.vote-controls button {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.4rem 0.8rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background-color: #f9f9f9;
+  color: #555;
+  cursor: pointer;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+
+.vote-controls button:hover {
+  background-color: #eee;
+  border-color: #bbb;
+}
+
+.vote-controls button.active-vote {
+  background-color: var(--primary-color);
+  color: white;
+  border-color: var(--primary-color);
+}
+
+.vote-controls button.active-vote:hover {
+  background-color: var(--secondary-color);
+  border-color: var(--secondary-color);
 }

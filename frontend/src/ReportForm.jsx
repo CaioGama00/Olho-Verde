@@ -6,7 +6,6 @@ function ReportForm({ position, onClose, onSubmit, problemTypes }) {
   const modalRef = useRef();
 
   useEffect(() => {
-    // When the component mounts, disable click propagation on the modal
     if (modalRef.current) {
       L.DomEvent.disableClickPropagation(modalRef.current);
     }
@@ -31,8 +30,8 @@ function ReportForm({ position, onClose, onSubmit, problemTypes }) {
             ))}
           </select>
           <div className="modal-actions">
-            <button type="submit">Enviar Report</button>
-            <button type="button" onClick={onClose}>Cancelar</button>
+            <button type="submit" className="modal-button submit">Enviar</button>
+            <button type="button" onClick={onClose} className="modal-button cancel">Cancelar</button>
           </div>
         </form>
       </div>

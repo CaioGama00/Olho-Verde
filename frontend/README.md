@@ -1,24 +1,17 @@
-# Olho-Verde Frontend
+# Frontend Olho Verde
 
-Esta pasta contém o frontend do projeto Olho-Verde.
+Este diretório contém o código-fonte para o frontend do projeto Olho Verde, desenvolvido com React e Vite.
 
-## Executando o frontend
+## Como Executar
 
-Para executar a aplicação frontend, siga estas etapas:
+1. **Instale as dependências:**
+   ```bash
+   npm install
+   ```
 
-1.  Navegue até o diretório `frontend`:
-    ```bash
-    cd frontend
-    ```
+2. **Inicie o servidor de desenvolvimento:**
+   ```bash
+   npm run dev
+   ```
 
-2.  Instale as dependências:
-    ```bash
-    npm install
-    ```
-
-3.  Inicie o servidor de desenvolvimento:
-    ```bash
-    npm run dev
-    ```
-
-A aplicação estará disponível em `http://localhost:5173` (ou outra porta, se a 5173 estiver ocupada).
+A aplicação estará disponível em `http://localhost:5173` (ou outra porta, se a 5173 estiver em uso).
