@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, useLocation } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import { renderToStaticMarkup } from 'react-dom/server';
@@ -245,24 +245,11 @@ function LocationMarker({ currentUser }) {
   );
 }
 
-function Home({ currentUser }) {
-  const position = [-23.55052, -46.633308];
-
-  return (
-    <main className="map-area">
-      <MapContainer center={position} zoom={13} scrollWheelZoom={true} style={{ height: '100%', width: '100%' }}>
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
-        {currentUser ? <LocationMarker currentUser={currentUser} /> : <LandingPage />}
-      </MapContainer>
-    </main>
-  );
-}
+const initialMapPosition = [-23.55052, -46.633308]; // Define outside App
 
 function App() {
   const [currentUser, setCurrentUser] = useState(null);
+  const location = useLocation();
 
   useEffect(() => {
     const subscription = authService.onAuthStateChange(setCurrentUser);
@@ -271,8 +258,30 @@ function App() {
     };
   }, []);
 
+  const disableMapInteraction = 
+    !currentUser || 
+    location.pathname === '/login' || 
+    location.pathname === '/register';
+
   return (
     <div className="app-container">
+      <MapContainer 
+        center={initialMapPosition} 
+        zoom={13} 
+        scrollWheelZoom={true} 
+        doubleClickZoom={true} 
+        dragging={true} 
+        zoomControl={true} 
+        style={{ height: '100%', width: '100%', position: 'absolute', top: 0, left: 0, zIndex: 0 }}
+      >
+        <TileLayer
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        />
+        {/* Render LocationMarker or LandingPage only on the home route */}
+        {location.pathname === '/' && (currentUser ? <LocationMarker currentUser={currentUser} /> : <LandingPage />)}
+      </MapContainer>
+
       <header className="app-header">
         <div className="app-logo-container">
           <FaRecycle className="app-logo" />
@@ -280,14 +289,17 @@ function App() {
         </div>
         <Navbar currentUser={currentUser} />
       </header>
-      <Routes>
-        <Route path="/" element={<Home currentUser={currentUser} />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
-      </Routes>
+
+      <div className="app-content-overlay" style={{ pointerEvents: (location.pathname === '/login' || location.pathname === '/register') ? 'auto' : 'none' }}> {/* New wrapper for content */} 
+        <Routes>
+          <Route path="/" element={null} /> {/* Handle home route */}
+          {/* Login and Register pages will still be rendered as overlays */}
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+        </Routes>
+      </div>
     </div>
   );
 }
 
 export default App;
-

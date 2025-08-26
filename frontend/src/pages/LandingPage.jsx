@@ -7,7 +7,7 @@ const LandingPage = () => {
     <div className="landing-container">
       <div className="landing-overlay">
         <div className="landing-content">
-          <h1>Bem-vindo ao Olho Verde</h1>
+          <h1>Olho Verde</h1>
           <p>Sua plataforma para monitorar e reportar problemas urbanos em sua cidade.</p>
           <div className="landing-actions">
             <Link to="/login" className="landing-button primary">Entrar</Link>

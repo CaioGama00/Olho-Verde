@@ -10,62 +10,78 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: rgba(0, 0, 0, 0.3); /* More transparent */
   display: flex;
   justify-content: center;
   align-items: center;
   text-align: center;
   color: white;
-  z-index: 1;
+  z-index: 1000; /* Higher z-index to be above the map */
+  backdrop-filter: blur(5px); /* Frosted glass effect */
+  -webkit-backdrop-filter: blur(5px); /* For Safari support */
+  pointer-events: auto; /* Capture all events to prevent map interaction */
 }
 
 .landing-content {
   max-width: 600px;
-  padding: 2rem;
-  background: rgba(0, 0, 0, 0.7);
-  border-radius: 8px;
+  padding: 2.5rem; /* Slightly more padding */
+  background: white; /* Opaque background for the content box */
+  color: #333; /* Dark text for readability on light background */
+  border-radius: 12px; /* Softer corners */
+  border: 1px solid rgba(0, 0, 0, 0.1); /* Subtle border */
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37); /* Modern shadow */
 }
 
 .landing-content h1 {
-  font-size: 3rem;
-  margin-bottom: 1rem;
+  font-size: 3.5rem; /* Slightly larger heading */
+  margin-bottom: 1.2rem;
+  text-shadow: none; /* Remove text shadow as background is now light */
+  color: var(--primary-color); /* Use primary color for heading */
 }
 
 .landing-content p {
-  font-size: 1.25rem;
-  margin-bottom: 2rem;
+  font-size: 1.35rem; /* Slightly larger paragraph */
+  margin-bottom: 2.5rem;
+  line-height: 1.6;
 }
 
 .landing-actions {
   display: flex;
   justify-content: center;
-  gap: 1rem;
+  gap: 1.5rem; /* More space between buttons */
 }
 
 .landing-button {
   text-decoration: none;
-  color: white;
-  font-weight: 600;
-  padding: 0.75rem 1.5rem;
-  border-radius: 4px;
-  transition: background-color 0.3s, transform 0.2s;
+  font-weight: 700; /* Bolder text */
+  padding: 0.9rem 2rem; /* Larger buttons */
+  border-radius: 50px; /* Pill-shaped buttons */
+  transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2); /* Button shadow */
 }
 
 .landing-button.primary {
   background-color: var(--primary-color);
+  border: 2px solid var(--primary-color); /* Solid border for primary */
+  color: white; /* White text for primary button */
 }
 
 .landing-button.primary:hover {
   background-color: var(--secondary-color);
-  transform: translateY(-2px);
+  border-color: var(--secondary-color);
+  transform: translateY(-3px); /* More pronounced lift */
+  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
 }
 
 .landing-button.secondary {
   background-color: transparent;
-  border: 2px solid var(--primary-color);
+  border: 2px solid var(--primary-color); /* Use primary color for secondary button border */
+  color: var(--primary-color); /* Primary color text for secondary button */
 }
 
 .landing-button.secondary:hover {
-  background-color: var(--primary-color);
-  transform: translateY(-2px);
+  background-color: rgba(0, 128, 0, 0.1); /* Subtle green background on hover */
+  border-color: var(--secondary-color); /* Secondary color border on hover */
+  transform: translateY(-3px);
+  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
 }

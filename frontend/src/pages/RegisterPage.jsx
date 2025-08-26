@@ -26,7 +26,7 @@ const RegisterPage = () => {
   };
 
   return (
-    <div className="register-page">
+    <div className="overlay-form-wrapper">
       <div className="register-container">
         <h2>Cadastro</h2>
         <form onSubmit={handleRegister} className="register-form">

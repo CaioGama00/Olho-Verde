@@ -23,7 +23,7 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="login-page">
+    <div className="overlay-form-wrapper">
       <div className="login-container">
         <h2>Entrar</h2>
         <form onSubmit={handleLogin} className="login-form">
