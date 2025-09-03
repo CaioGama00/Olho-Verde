@@ -28,7 +28,7 @@ function ReportForm({ position, onClose, onSubmit, problemTypes }) {
     formData.append('image', selectedFile);
 
     try {
-      const response = await fetch('http://localhost:3001/api/classify-image', {
+      const response = await fetch('https://olho-verde.onrender.com/api/classify-image', {
         method: 'POST',
         body: formData,
       });
