@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:3001/api/auth';
+const API_URL = 'https://olho-verde.onrender.com/api/auth';
 
 const register = async (name, email, password) => {
   const response = await axios.post(`${API_URL}/register`, {

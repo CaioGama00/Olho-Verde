@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:3001/api/reports';
+const API_URL = 'https://olho-verde.onrender.com/api/reports';
 
 const getAuthToken = () => {
   const user = JSON.parse(localStorage.getItem('user'));
