@@ -1,47 +1,38 @@
-import supabase from '../utils/supabase';
+import axios from 'axios';
+
+const API_URL = 'http://localhost:3001/api/auth';
 
 const register = async (name, email, password) => {
-  const { data, error } = await supabase.auth.signUp({
+  const response = await axios.post(`${API_URL}/register`, {
+    name,
     email,
     password,
-    options: {
-      data: {
-        name,
-      },
-    },
   });
-  return { data, error };
+  return response.data;
 };
 
 const login = async (email, password) => {
-  const { data, error } = await supabase.auth.signInWithPassword({
+  const response = await axios.post(`${API_URL}/login`, {
     email,
     password,
   });
-  return { data, error };
+  if (response.data.accessToken) {
+    localStorage.setItem('user', JSON.stringify(response.data));
+  }
+  return response.data;
 };
 
-const logout = async () => {
-  const { error } = await supabase.auth.signOut();
-  return { error };
+const logout = () => {
+  localStorage.removeItem('user');
 };
 
-const getUser = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    return user;
+const getCurrentUser = () => {
+  return JSON.parse(localStorage.getItem('user'));
 };
-
-const onAuthStateChange = (callback) => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-        callback(session?.user ?? null);
-    });
-    return subscription;
-}
 
 export default {
   register,
   login,
   logout,
-  getUser,
-  onAuthStateChange
+  getCurrentUser,
 };

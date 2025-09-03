@@ -4,7 +4,7 @@ import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import authService from '../services/authService';
 import './LoginPage.css';
 
-const LoginPage = () => {
+const LoginPage = ({ setCurrentUser }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -14,11 +14,12 @@ const LoginPage = () => {
   const handleLogin = async (e) => {
     e.preventDefault();
     setMessage('');
-    const { error } = await authService.login(email, password);
-    if (error) {
-      setMessage('Falha no login: ' + error.message);
-    } else {
+    try {
+      const user = await authService.login(email, password);
+      setCurrentUser(user);
       navigate('/');
+    } catch (error) {
+      setMessage('Falha no login: ' + error.response.data.message);
     }
   };
 

@@ -1,9 +1,10 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import L from 'leaflet';
 import './ReportForm.css';
 
 function ReportForm({ position, onClose, onSubmit, problemTypes }) {
   const modalRef = useRef();
+  const [selectedFile, setSelectedFile] = useState(null);
 
   useEffect(() => {
     if (modalRef.current) {
@@ -11,10 +12,43 @@ function ReportForm({ position, onClose, onSubmit, problemTypes }) {
     }
   }, []);
 
-  const handleSubmit = (event) => {
+  const handleFileChange = (event) => {
+    setSelectedFile(event.target.files[0]);
+  };
+
+  const handleSubmit = async (event) => {
     event.preventDefault();
-    const selectedProblem = event.target.elements.problemType.value;
-    onSubmit(selectedProblem);
+
+    if (!selectedFile) {
+      alert('Por favor, selecione uma imagem.');
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('image', selectedFile);
+
+    try {
+      const response = await fetch('http://localhost:3001/api/classify-image', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Erro ao classificar a imagem.');
+      }
+
+      const result = await response.json();
+
+      if (result.isTrash) {
+        const selectedProblem = event.target.elements.problemType.value;
+        onSubmit(selectedProblem);
+      } else {
+        alert('A imagem não parece conter lixo. O relatório não foi enviado.');
+      }
+    } catch (error) {
+      console.error('Erro:', error);
+      alert('Ocorreu um erro ao enviar o relatório.');
+    }
   };
 
   return (
@@ -29,6 +63,8 @@ function ReportForm({ position, onClose, onSubmit, problemTypes }) {
               <option key={type} value={type}>{type}</option>
             ))}
           </select>
+          <label htmlFor="image">Selecione uma imagem:</label>
+          <input type="file" id="image" name="image" accept="image/*" onChange={handleFileChange} />
           <div className="modal-actions">
             <button type="submit" className="modal-button submit">Enviar</button>
             <button type="button" onClick={onClose} className="modal-button cancel">Cancelar</button>

@@ -13,7 +13,7 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import LandingPage from './pages/LandingPage'; // Import LandingPage
 import authService from './services/authService';
-import supabase from './utils/supabase';
+import reportService from './services/reportService';
 
 import './App.css';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
@@ -57,39 +57,13 @@ function LocationMarker({ currentUser }) {
   const [reports, setReports] = useState([]);
   const [newMarker, setNewMarker] = useState(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [userVotes, setUserVotes] = useState({}); // To store user's votes
 
   const fetchReports = async () => {
-    const { data, error } = await supabase.from('reports').select('*');
-    if (error) {
+    try {
+      const response = await reportService.getReports();
+      setReports(response.data);
+    } catch (error) {
       console.error("Error fetching reports:", error);
-    } else {
-      const formattedReports = data.map(report => ({
-        ...report,
-        position: { lat: report.lat, lng: report.lng }
-      }));
-      setReports(formattedReports);
-    }
-  };
-
-  const fetchUserVotes = async () => {
-    if (currentUser) {
-      const { data, error } = await supabase
-        .from('user_votes')
-        .select('report_id, vote_value')
-        .eq('user_id', currentUser.id);
-
-      if (error) {
-        console.error("Error fetching user votes:", error);
-      } else {
-        const votesMap = data.reduce((acc, vote) => {
-          acc[vote.report_id] = vote.vote_value;
-          return acc;
-        }, {});
-        setUserVotes(votesMap);
-      }
-    } else {
-      setUserVotes({}); // Clear votes if no user
     }
   };
 
@@ -97,50 +71,18 @@ function LocationMarker({ currentUser }) {
     fetchReports();
   }, []);
 
-  useEffect(() => {
-    fetchUserVotes();
-  }, [currentUser]); // Re-fetch votes when user changes
-
   const handleVote = async (reportId, voteType) => {
     if (!currentUser) {
       alert('Você precisa estar logado para votar!');
       return;
     }
 
-    const currentVote = userVotes[reportId];
-    let newVoteValue;
-
-    if (voteType === 'upvote') {
-      if (currentVote === 1) {
-        newVoteValue = 0; // Remove upvote
-      } else {
-        newVoteValue = 1; // Upvote or change from downvote
-      }
-    } else if (voteType === 'downvote') {
-      if (currentVote === -1) {
-        newVoteValue = 0; // Remove downvote
-      } else {
-        newVoteValue = -1; // Downvote or change from upvote
-      }
-    }
-
     try {
-      const { error } = await supabase.rpc('handle_vote', {
-        report_id_param: reportId,
-        user_id_param: currentUser.id,
-        new_vote_value_param: newVoteValue,
-      });
-
-      if (error) {
-        console.error("Error voting:", error);
-        alert('Erro ao registrar seu voto: ' + error.message);
-      } else {
-        fetchReports(); // Re-fetch reports to update counts
-        fetchUserVotes(); // Re-fetch user votes to update UI
-      }
-    } catch (err) {
-      console.error("Unexpected error during vote handling:", err);
-      alert('Ocorreu um erro inesperado ao registrar seu voto.');
+      await reportService.vote(reportId, voteType);
+      fetchReports(); // Re-fetch reports to update counts
+    } catch (error) {
+      console.error("Error voting:", error);
+      alert('Erro ao registrar seu voto: ' + error.message);
     }
   };
 
@@ -167,21 +109,13 @@ function LocationMarker({ currentUser }) {
 
     const { lat, lng } = newMarker.position;
 
-    const { data, error } = await supabase
-      .from('reports')
-      .insert([{ problem: problemType, lat, lng, user_id: currentUser.id }])
-      .select();
-
-    if (error) {
-      console.error("Error submitting report:", error);
-    } else if (data) {
-        const savedReport = {
-            ...data[0],
-            position: { lat: data[0].lat, lng: data[0].lng }
-        };
-      setReports(prevReports => [...prevReports, savedReport]);
+    try {
+      await reportService.createReport({ problem: problemType, position: { lat, lng } });
       setNewMarker(null);
       handleFormClose();
+      fetchReports();
+    } catch (error) {
+      console.error("Error submitting report:", error);
     }
   };
 
@@ -196,16 +130,14 @@ function LocationMarker({ currentUser }) {
                 <p>{report.problem}</p>
                 <div className="vote-controls">
                   <button 
-                    onClick={(e) => { L.DomEvent.stopPropagation(e); handleVote(report.id, 'upvote'); }}
+                    onClick={(e) => { L.DomEvent.stopPropagation(e); handleVote(report.id, 'up'); }}
                     disabled={!currentUser}
-                    className={userVotes[report.id] === 1 ? 'active-vote' : ''}
                   >
                     <FaThumbsUp /> {report.upvotes}
                   </button>
                   <button 
-                    onClick={(e) => { L.DomEvent.stopPropagation(e); handleVote(report.id, 'downvote'); }}
+                    onClick={(e) => { L.DomEvent.stopPropagation(e); handleVote(report.id, 'down'); }}
                     disabled={!currentUser}
-                    className={userVotes[report.id] === -1 ? 'active-vote' : ''}
                   >
                     <FaThumbsDown /> {report.downvotes}
                   </button>
@@ -248,14 +180,14 @@ function LocationMarker({ currentUser }) {
 const initialMapPosition = [-23.55052, -46.633308]; // Define outside App
 
 function App() {
-  const [currentUser, setCurrentUser] = useState(null);
+  const [currentUser, setCurrentUser] = useState(undefined);
   const location = useLocation();
 
   useEffect(() => {
-    const subscription = authService.onAuthStateChange(setCurrentUser);
-    return () => {
-      subscription.unsubscribe();
-    };
+    const user = authService.getCurrentUser();
+    if (user) {
+      setCurrentUser(user);
+    }
   }, []);
 
   const disableMapInteraction = 
@@ -294,7 +226,7 @@ function App() {
         <Routes>
           <Route path="/" element={null} /> {/* Handle home route */}
           {/* Login and Register pages will still be rendered as overlays */}
-          <Route path="/login" element={<LoginPage />} />
+          <Route path="/login" element={<LoginPage setCurrentUser={setCurrentUser} />} />
           <Route path="/register" element={<RegisterPage />} />
         </Routes>
       </div>

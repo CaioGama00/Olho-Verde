@@ -15,13 +15,13 @@ const RegisterPage = () => {
     e.preventDefault();
     setMessage('');
     setError(false);
-    const { error } = await authService.register(name, email, password);
-    if (error) {
-      setMessage('Falha no cadastro: ' + error.message);
-      setError(true);
-    } else {
-      setMessage('Cadastro bem-sucedido! Por favor, verifique seu email para confirmar sua conta.');
+    try {
+      const response = await authService.register(name, email, password);
+      setMessage(response.message);
       setError(false);
+    } catch (error) {
+      setMessage('Falha no cadastro: ' + error.response.data.message);
+      setError(true);
     }
   };
 
