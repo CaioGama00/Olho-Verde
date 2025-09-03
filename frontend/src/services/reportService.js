@@ -1,32 +1,15 @@
-import axios from 'axios';
-
-const API_URL = 'https://olho-verde.onrender.com/api/reports';
-
-const getAuthToken = () => {
-  const user = JSON.parse(localStorage.getItem('user'));
-  return user ? user.accessToken : null;
-};
+import api from './api';
 
 const getReports = () => {
-  return axios.get(API_URL);
+  return api.get('/reports');
 };
 
 const createReport = (data) => {
-  const token = getAuthToken();
-  return axios.post(API_URL, data, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+  return api.post('/reports', data);
 };
 
 const vote = (id, vote) => {
-  const token = getAuthToken();
-  return axios.post(`${API_URL}/${id}/vote`, { vote }, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+  return api.post(`/reports/${id}/vote`, { vote });
 };
 
 export default {

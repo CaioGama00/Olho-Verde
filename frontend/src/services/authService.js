@@ -1,9 +1,7 @@
-import axios from 'axios';
-
-const API_URL = 'https://olho-verde.onrender.com/api/auth';
+import api from './api';
 
 const register = async (name, email, password) => {
-  const response = await axios.post(`${API_URL}/register`, {
+  const response = await api.post('/auth/register', {
     name,
     email,
     password,
@@ -12,7 +10,7 @@ const register = async (name, email, password) => {
 };
 
 const login = async (email, password) => {
-  const response = await axios.post(`${API_URL}/login`, {
+  const response = await api.post('/auth/login', {
     email,
     password,
   });

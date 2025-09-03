@@ -39,12 +39,67 @@ Toda a documentação referente ao planejamento, requisitos, arquitetura e teste
 *   [Backlog Inicial de Funcionalidades](./docs/03_BACKLOG_INICIAL.md)
 *   [Apoio Ferramental](./docs/04_FERRAMENTAS.md)
 
-## 5. Tecnologias (Proposta Inicial)
+## 5. Tecnologias
 
-*   **Frontend:** React
+*   **Frontend:** React (com Vite)
 *   **Backend:** Node.js com Express.js
-*   **Banco de Dados:** PostgreSQL
+*   **Banco de Dados:** JSON Server (para simulação de API RESTful com `db.json`)
 
 ## 6. Como Contribuir
 
 Este é um projeto acadêmico. Para detalhes sobre o cronograma e as entregas, consulte a documentação na pasta `/docs`.
+
+## 7. Getting Started
+
+Para configurar e executar o projeto localmente, siga os passos abaixo:
+
+### Pré-requisitos
+
+*   Node.js (versão 14 ou superior)
+*   npm (gerenciador de pacotes do Node.js)
+*   Git
+
+### Instalação
+
+1.  **Clone o repositório:**
+    ```bash
+    git clone https://github.com/seu-usuario/Olho-Verde.git
+    cd Olho-Verde
+    ```
+
+2.  **Instale as dependências do Backend:**
+    ```bash
+    cd backend
+    npm install
+    cd ..
+    ```
+
+3.  **Instale as dependências do Frontend:**
+    ```bash
+    cd frontend
+    npm install
+    cd ..
+    ```
+
+### Execução
+
+1.  **Inicie o Backend:**
+    Abra um novo terminal, navegue até o diretório `backend` e execute:
+    ```bash
+    cd backend
+    npm start
+    ```
+    O servidor estará em execução em `http://localhost:3001`.
+
+2.  **Inicie o Frontend:**
+    Abra outro novo terminal, navegue até o diretório `frontend` e execute:
+    ```bash
+    cd frontend
+    npm run dev
+    ```
+    A aplicação estará disponível em `http://localhost:5173` (ou outra porta, se a 5173 estiver em uso).
+
+### URLs de Deploy
+
+*   **Frontend:** [olhoverde.netlify.app](https://olhoverde.netlify.app)
+*   **Backend:** [https://olho-verde.onrender.com](https://olho-verde.onrender.com)
