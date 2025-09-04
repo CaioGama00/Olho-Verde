@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
@@ -53,6 +53,134 @@ const getProblemIcon = (problem) => {
   });
 };
 
+// NOTE: This component assumes the `report` object from the API includes:
+// - upvotes (number)
+// - downvotes (number)
+// - user_vote ('up', 'down', or null) for the currently logged-in user.
+// The `reportService.getReports()` may need to be updated to provide this.
+function ReportMarker({ report, currentUser }) {
+  const markerRef = useRef(null);
+
+  // Local state for immediate UI updates
+  const [localUpvotes, setLocalUpvotes] = useState(report.upvotes);
+  const [localDownvotes, setLocalDownvotes] = useState(report.downvotes);
+  const [currentUserVote, setCurrentUserVote] = useState(report.user_vote);
+
+  // Use a ref to store the initial vote state to compare against on close
+  const initialVoteState = useRef({
+    vote: report.user_vote,
+    upvotes: report.upvotes,
+    downvotes: report.downvotes,
+  });
+
+  // This effect handles persisting the vote when the popup is closed
+  useEffect(() => {
+    const marker = markerRef.current;
+    if (marker) {
+      const handlePopupClose = () => {
+        // If the vote has changed from its initial state, persist it
+        if (currentUserVote !== initialVoteState.current.vote) {
+          // The vote to send can be null (if un-voted)
+          const voteToSend = currentUserVote === 'up' || currentUserVote === 'down' ? currentUserVote : null;
+          reportService.vote(report.id, voteToSend).catch(error => {
+            console.error("Failed to persist vote:", error);
+            // On failure, revert the UI to its original state
+            alert('Houve um erro ao salvar seu voto. Tente novamente.');
+            setLocalUpvotes(initialVoteState.current.upvotes);
+            setLocalDownvotes(initialVoteState.current.downvotes);
+            setCurrentUserVote(initialVoteState.current.vote);
+          });
+        }
+      };
+
+      marker.on('popupclose', handlePopupClose);
+
+      return () => {
+        marker.off('popupclose', handlePopupClose);
+      };
+    }
+  }, [currentUserVote, report.id]);
+
+  const handleLocalVote = (e, voteType) => {
+    L.DomEvent.stopPropagation(e); // Prevent the popup from closing on click
+    if (!currentUser) return;
+
+    // Animation: Add class to trigger pop and remove after animation completes
+    const button = e.currentTarget;
+    button.classList.add('vote-animating');
+    setTimeout(() => {
+      button.classList.remove('vote-animating');
+    }, 300); // Must match animation duration in App.css
+
+    // Create copies of current state to modify
+    let newVote = currentUserVote;
+    let upvotes = localUpvotes;
+    let downvotes = localDownvotes;
+
+    const isCurrentlyUpvoted = newVote === 'up';
+    const isCurrentlyDownvoted = newVote === 'down';
+
+    if (voteType === 'up') {
+      if (isCurrentlyUpvoted) { // User is un-voting
+        newVote = null;
+        upvotes--;
+      } else if (isCurrentlyDownvoted) { // User is switching from downvote to upvote
+        newVote = 'up';
+        upvotes++;
+        downvotes--;
+      } else { // User is casting a new upvote
+        newVote = 'up';
+        upvotes++;
+      }
+    } else if (voteType === 'down') {
+      if (isCurrentlyDownvoted) { // User is un-voting
+        newVote = null;
+        downvotes--;
+      } else if (isCurrentlyUpvoted) { // User is switching from upvote to downvote
+        newVote = 'down';
+        downvotes++;
+        upvotes--;
+      } else { // User is casting a new downvote
+        newVote = 'down';
+        downvotes++;
+      }
+    }
+
+    // Update the local state to give immediate feedback
+    setCurrentUserVote(newVote);
+    setLocalUpvotes(upvotes);
+    setLocalDownvotes(downvotes);
+  };
+
+  return (
+    <Marker ref={markerRef} position={report.position} icon={getProblemIcon(report.problem)}>
+      <Popup>
+        <div className="popup-content">
+          <h4>Problema Reportado</h4>
+          <p>{report.problem}</p>
+          <div className="vote-controls">
+            <button
+              onClick={(e) => handleLocalVote(e, 'up')}
+              disabled={!currentUser}
+              className={currentUserVote === 'up' ? 'active-vote' : ''}
+            >
+              <FaThumbsUp /> {localUpvotes}
+            </button>
+            <button
+              onClick={(e) => handleLocalVote(e, 'down')}
+              disabled={!currentUser}
+              className={currentUserVote === 'down' ? 'active-vote' : ''}
+            >
+              <FaThumbsDown /> {localDownvotes}
+            </button>
+          </div>
+        </div>
+      </Popup>
+    </Marker>
+  );
+}
+
+
 function LocationMarker({ currentUser }) {
   const [reports, setReports] = useState([]);
   const [newMarker, setNewMarker] = useState(null);
@@ -60,6 +188,8 @@ function LocationMarker({ currentUser }) {
 
   const fetchReports = async () => {
     try {
+      // NOTE: This service call should be updated to include the current user's
+      // vote status for each report (e.g., a `user_vote` field).
       const response = await reportService.getReports();
       setReports(response.data);
     } catch (error) {
@@ -71,26 +201,11 @@ function LocationMarker({ currentUser }) {
     fetchReports();
   }, []);
 
-  const handleVote = async (reportId, voteType) => {
-    if (!currentUser) {
-      alert('Você precisa estar logado para votar!');
-      return;
-    }
-
-    try {
-      await reportService.vote(reportId, voteType);
-      fetchReports(); // Re-fetch reports to update counts
-    } catch (error) {
-      console.error("Error voting:", error);
-      alert('Erro ao registrar seu voto: ' + error.message);
-    }
-  };
-
   useMapEvents({
     click(e) {
       if (isFormOpen || !currentUser) return;
       setNewMarker({ position: e.latlng });
-      setIsFormOpen(false);
+      setIsFormOpen(false); // Close any previous form
     },
   });
 
@@ -113,7 +228,7 @@ function LocationMarker({ currentUser }) {
       await reportService.createReport({ problem: problemType, position: { lat, lng } });
       setNewMarker(null);
       handleFormClose();
-      fetchReports();
+      fetchReports(); // Re-fetch reports to include the new one
     } catch (error) {
       console.error("Error submitting report:", error);
     }
@@ -123,33 +238,16 @@ function LocationMarker({ currentUser }) {
     <>
       <MarkerClusterGroup>
         {reports.map(report => (
-          <Marker key={report.id} position={report.position} icon={getProblemIcon(report.problem)}>
-            <Popup>
-              <div className="popup-content">
-                <h4>Problema Reportado</h4>
-                <p>{report.problem}</p>
-                <div className="vote-controls">
-                  <button 
-                    onClick={(e) => { L.DomEvent.stopPropagation(e); handleVote(report.id, 'up'); }}
-                    disabled={!currentUser}
-                  >
-                    <FaThumbsUp /> {report.upvotes}
-                  </button>
-                  <button 
-                    onClick={(e) => { L.DomEvent.stopPropagation(e); handleVote(report.id, 'down'); }}
-                    disabled={!currentUser}
-                  >
-                    <FaThumbsDown /> {report.downvotes}
-                  </button>
-                </div>
-              </div>
-            </Popup>
-          </Marker>
+          <ReportMarker
+            key={report.id}
+            report={report}
+            currentUser={currentUser}
+          />
         ))}
       </MarkerClusterGroup>
 
       {newMarker && (
-        <Marker 
+        <Marker
           position={newMarker.position}
           icon={defaultIcon}
         >
