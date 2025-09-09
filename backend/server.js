@@ -173,7 +173,7 @@ app.post('/api/classify-image', upload.single('image'), async (req, res) => {
             }
         );
 
-        const trashKeywords = ['trash', 'garbage', 'waste', 'recycling', 'litter', 'plastic bag', 'bottle', 'can'];
+        const trashKeywords = ['trash', 'garbage', 'waste', 'recycling', 'litter'];
         const isTrash = response.data.some(item => trashKeywords.some(keyword => item.label.toLowerCase().includes(keyword)));
 
         res.json({ isTrash });
