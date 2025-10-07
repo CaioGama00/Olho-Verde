@@ -187,8 +187,3 @@ app.post('/api/classify-image', upload.single('image'), async (req, res) => {
 app.listen(PORT, () => {
   console.log(`Backend server is running on http://localhost:${PORT}`);
 });
-
-
-app.listen(PORT, () => {
-  console.log(`Backend server is running on http://localhost:${PORT}`);
-});
