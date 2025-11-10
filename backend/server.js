@@ -19,10 +19,9 @@ const HUGGINGFACE_INFERENCE_URL = (() => {
   }
   return rawUrl;
 })();
-const MOCK_CLASSIFICATION = process.env.MOCK_CLASSIFICATION === 'true';
 const IMAGE_CLASSIFICATION_ENABLED = Boolean(HUGGINGFACE_API_KEY);
-if (!IMAGE_CLASSIFICATION_ENABLED && !MOCK_CLASSIFICATION) {
-  console.warn('HUGGINGFACE_API_KEY não definido. /api/classify-image ficará desabilitado (ou ative MOCK_CLASSIFICATION=true para testes locais).');
+if (!IMAGE_CLASSIFICATION_ENABLED) {
+  console.warn('HUGGINGFACE_API_KEY não definido. /api/classify-image ficará desabilitado.');
 }
 
 const ADMIN_EMAILS = new Set(
@@ -289,7 +288,13 @@ app.post('/api/auth/login', async (req, res) => {
     }
 });
 
-const trashKeywords = [
+const TRASH_SCORE_THRESHOLD = Number(process.env.TRASH_SCORE_THRESHOLD) || 0.7;
+const TRASH_KEYWORDS = [
+  'trash',
+  'garbage',
+  'litter',
+  'waste',
+  'rubbish',
   'trash heap',
   'trash pile',
   'garbage pile',
@@ -300,14 +305,14 @@ const trashKeywords = [
   'roadside litter',
   'illegal dumping',
   'dumped trash',
-  'dumped garbage'
+  'dumped garbage',
+  'landfill',
+  'garbage dump',
+  'waste dump',
 ];
 
 const classifyImageBuffer = async (file) => {
   if (!IMAGE_CLASSIFICATION_ENABLED) {
-    if (MOCK_CLASSIFICATION) {
-      return { isTrash: (file.buffer.length % 3) === 0 };
-    }
     const disabledError = new Error('IMAGE_CLASSIFICATION_DISABLED');
     disabledError.status = 503;
     throw disabledError;
@@ -338,13 +343,17 @@ const classifyImageBuffer = async (file) => {
       ? response.data.labels
       : [];
 
-  const isTrash = predictions.some(item =>
-    trashKeywords.some(keyword =>
-      (item.label || '').toLowerCase().includes(keyword)
-    )
+  const sorted = [...predictions].sort((a, b) => (b.score || 0) - (a.score || 0));
+  const topPrediction = sorted[0];
+  const label = (topPrediction?.label || '').toLowerCase();
+  const keywordMatched = TRASH_KEYWORDS.some((keyword) => label.includes(keyword));
+  const isTrash = Boolean(
+    topPrediction &&
+    topPrediction.score >= TRASH_SCORE_THRESHOLD &&
+    keywordMatched
   );
 
-  return { isTrash };
+  return { isTrash, topPrediction };
 };
 
 app.post('/api/classify-image', upload.single('image'), async (req, res) => {
@@ -352,13 +361,13 @@ app.post('/api/classify-image', upload.single('image'), async (req, res) => {
     return res.status(400).json({ error: 'No image file provided' });
   }
 
-  if (!IMAGE_CLASSIFICATION_ENABLED && !MOCK_CLASSIFICATION) {
-    return res.status(503).json({ error: 'Image classification is disabled. Configure HUGGINGFACE_API_KEY ou defina MOCK_CLASSIFICATION=true para testes.' });
+  if (!IMAGE_CLASSIFICATION_ENABLED) {
+    return res.status(503).json({ error: 'Image classification is disabled. Configure HUGGINGFACE_API_KEY  para testes.' });
   }
 
   try {
-    const result = await classifyImageBuffer(req.file);
-    res.json(result);
+    const { isTrash, topPrediction } = await classifyImageBuffer(req.file);
+    res.json({ isTrash, topPrediction });
   } catch (error) {
     const status = error.status || error.response?.status || 500;
     const data = error.data || error.response?.data;
