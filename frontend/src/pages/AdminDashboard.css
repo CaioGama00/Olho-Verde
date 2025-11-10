@@ -1,5 +1,5 @@
 .admin-dashboard {
-  background-color: rgba(255, 255, 255, 0.95);
+  background-color: rgba(244, 250, 244, 0.95);
   backdrop-filter: blur(4px);
   padding: 2rem;
   border-radius: 16px;
@@ -7,6 +7,7 @@
   box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
   overflow-y: auto;
   max-height: calc(100vh - 6rem);
+  color: #1f2a1f;
 }
 
 .admin-dashboard header {
@@ -42,7 +43,7 @@
 }
 
 .admin-card {
-  background-color: #ffffff;
+  background-color: #fefefe;
   border-radius: 12px;
   padding: 1.25rem;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
@@ -86,6 +87,7 @@ table {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.9rem;
+  color: #212529;
 }
 
 th, td {
@@ -97,10 +99,12 @@ th, td {
 th {
   background-color: #f8f9fa;
   font-weight: 600;
+  color: #1d1d1d;
 }
 
 tbody tr:hover {
   background-color: #f1f3f5;
+  color: #111;
 }
 
 .empty-row {

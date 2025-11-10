@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Routes, Route, useLocation } from 'react-router-dom';
+import { Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import { renderToStaticMarkup } from 'react-dom/server';
@@ -282,7 +282,9 @@ const initialMapPosition = [-23.55052, -46.633308]; // Define outside App
 
 function App() {
   const [currentUser, setCurrentUser] = useState(null);
+  const [mapInstance, setMapInstance] = useState(null);
   const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const user = authService.getCurrentUser();
@@ -290,6 +292,25 @@ function App() {
   }, []);
 
   const overlayRoutes = ['/login', '/register', '/admin'];
+  const isAuthenticated = Boolean(currentUser);
+
+  useEffect(() => {
+    if (!mapInstance) return;
+
+    if (isAuthenticated) {
+      mapInstance.dragging.enable();
+      mapInstance.scrollWheelZoom.enable();
+      mapInstance.doubleClickZoom.enable();
+      mapInstance.boxZoom.enable();
+      mapInstance.keyboard.enable();
+    } else {
+      mapInstance.dragging.disable();
+      mapInstance.scrollWheelZoom.disable();
+      mapInstance.doubleClickZoom.disable();
+      mapInstance.boxZoom.disable();
+      mapInstance.keyboard.disable();
+    }
+  }, [mapInstance, isAuthenticated]);
 
   const handleLogout = async () => {
     await authService.logout();
@@ -298,27 +319,42 @@ function App() {
 
   return (
     <div className="app-container">
-      <MapContainer 
-        center={initialMapPosition} 
-        zoom={13} 
-        scrollWheelZoom={true} 
-        doubleClickZoom={true} 
-        dragging={true} 
-        zoomControl={true} 
-        style={{ height: '100%', width: '100%', position: 'absolute', top: 0, left: 0, zIndex: 0 }}
-      >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
-        {/* Render LocationMarker or LandingPage only on the home route */}
-        {location.pathname === '/' && (currentUser ? <LocationMarker currentUser={currentUser} /> : <LandingPage />)}
-      </MapContainer>
+      <div className="map-shell">
+        <MapContainer 
+          center={initialMapPosition} 
+          zoom={13} 
+          scrollWheelZoom={isAuthenticated} 
+          doubleClickZoom={isAuthenticated} 
+          dragging={isAuthenticated} 
+          zoomControl={true} 
+          whenCreated={setMapInstance}
+          style={{ height: '100%', width: '100%', position: 'absolute', top: 0, left: 0, zIndex: 0 }}
+        >
+          <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          />
+          {/* Render LocationMarker or LandingPage only on the home route */}
+          {location.pathname === '/' && (currentUser ? <LocationMarker currentUser={currentUser} /> : <LandingPage />)}
+        </MapContainer>
+        {!isAuthenticated && (
+          <div className="map-lock-overlay">
+            <p>Entre na sua conta para navegar e registrar novos pontos.</p>
+          </div>
+        )}
+      </div>
 
       <header className="app-header">
         <div className="app-logo-container">
-          <FaRecycle className="app-logo" />
-          <h1>Olho Verde</h1>
+          {isAuthenticated && (
+            <button type="button" className="home-chip" onClick={() => navigate('/')}>
+              ← Mapa
+            </button>
+          )}
+          <button type="button" className="logo-button" onClick={() => navigate('/')}>
+            <FaRecycle className="app-logo" />
+            <h1>Olho Verde</h1>
+          </button>
         </div>
         <Navbar currentUser={currentUser} onLogout={handleLogout} />
       </header>

@@ -132,57 +132,126 @@ app.post('/api/reports', authenticateToken, async (req, res) => {
 
 // POST /api/reports/:id/vote - Vote on a report (protected)
 app.post('/api/reports/:id/vote', authenticateToken, async (req, res) => {
-    const reportId = parseInt(req.params.id, 10);
-    const { vote } = req.body; // expecting { vote: 'up' } or { vote: 'down' }
-    const { id: user_id } = req.user;
+  const reportId = parseInt(req.params.id, 10);
+  const { vote } = req.body; // expecting { vote: 'up' } | 'down' | null
+  const { id: user_id } = req.user;
 
-    let newVoteValue;
-    if (vote === 'up') {
-        newVoteValue = 1;
-    } else if (vote === 'down') {
-        newVoteValue = -1;
+  let voteValue;
+  if (vote === 'up') {
+    voteValue = 1;
+  } else if (vote === 'down') {
+    voteValue = -1;
+  } else if (vote === null || vote === 'none') {
+    voteValue = 0;
+  } else {
+    return res.status(400).json({ message: 'Invalid vote type' });
+  }
+
+  try {
+    const { data: report, error: reportError } = await supabase
+      .from('reports')
+      .select('upvotes, downvotes')
+      .eq('id', reportId)
+      .single();
+
+    if (reportError) throw reportError;
+    if (!report) return res.status(404).json({ message: 'Report not found' });
+
+    const { data: existingVote, error: existingError } = await supabase
+      .from('user_votes')
+      .select('vote_value')
+      .eq('user_id', user_id)
+      .eq('report_id', reportId)
+      .maybeSingle();
+
+    if (existingError) throw existingError;
+
+    let upvotes = report.upvotes || 0;
+    let downvotes = report.downvotes || 0;
+
+    if (!existingVote && voteValue === 0) {
+      return res.json({ upvotes, downvotes, user_vote: null });
+    }
+
+    if (!existingVote) {
+      if (voteValue === 1) upvotes += 1;
+      if (voteValue === -1) downvotes += 1;
+      await supabase
+        .from('user_votes')
+        .insert([{ user_id, report_id: reportId, vote_value: voteValue }]);
     } else {
-        return res.status(400).json({ message: 'Invalid vote type' });
-    }
-
-    try {
-        const { data, error } = await supabase.rpc('handle_vote', {
-            report_id_param: reportId,
-            user_id_param: user_id,
-            new_vote_value_param: newVoteValue,
+      if (existingVote.vote_value === voteValue) {
+        return res.json({
+          upvotes,
+          downvotes,
+          user_vote: voteValue === 1 ? 'up' : voteValue === -1 ? 'down' : null,
         });
+      }
 
-        if (error) throw error;
+      if (existingVote.vote_value === 1) upvotes -= 1;
+      if (existingVote.vote_value === -1) downvotes -= 1;
 
-        res.json(data);
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: 'Internal server error' });
+      if (voteValue === 0) {
+        await supabase
+          .from('user_votes')
+          .delete()
+          .eq('user_id', user_id)
+          .eq('report_id', reportId);
+      } else {
+        if (voteValue === 1) upvotes += 1;
+        if (voteValue === -1) downvotes += 1;
+        await supabase
+          .from('user_votes')
+          .update({ vote_value: voteValue })
+          .eq('user_id', user_id)
+          .eq('report_id', reportId);
+      }
     }
+
+    await supabase
+      .from('reports')
+      .update({ upvotes, downvotes })
+      .eq('id', reportId);
+
+    res.json({
+      upvotes,
+      downvotes,
+      user_vote: voteValue === 1 ? 'up' : voteValue === -1 ? 'down' : null,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 // POST /api/auth/register - Register a new user
 app.post('/api/auth/register', async (req, res) => {
-    const { name, email, password } = req.body;
+  const { name, email, password } = req.body;
 
-    try {
-        const { data, error } = await supabase.auth.signUp({
-            email,
-            password,
-            options: {
-                data: {
-                    name,
-                },
-            },
-        });
+  try {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          name,
+        },
+      },
+    });
 
-        if (error) throw error;
-
-        res.status(201).json({ message: 'User created successfully', user: data.user });
-    } catch (err) {
-        console.error(err);
-        res.status(400).json({ message: err.message });
+    if (error) {
+      throw error;
     }
+
+    if (data?.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+      return res.status(400).json({ message: 'Este email já está cadastrado.' });
+    }
+
+    res.status(201).json({ message: 'User created successfully', user: data.user });
+  } catch (err) {
+    console.error(err);
+    res.status(400).json({ message: err.message || 'Falha ao registrar usuário.' });
+  }
 });
 
 // POST /api/auth/login - Login a user
@@ -241,7 +310,7 @@ app.get('/api/admin/reports', authenticateToken, requireAdmin, async (req, res) 
   try {
     const { data, error } = await supabase
       .from('reports')
-      .select('*, users(name, email)')
+      .select('*, users:users!reports_user_id_fkey(name, email)')
       .order('created_at', { ascending: false });
     if (error) throw error;
 
@@ -266,7 +335,7 @@ app.patch('/api/admin/reports/:id/status', authenticateToken, requireAdmin, asyn
       .from('reports')
       .update({ status })
       .eq('id', reportId)
-      .select('*, users(name, email)')
+      .select('*, users:users!reports_user_id_fkey(name, email)')
       .single();
 
     if (error) throw error;
