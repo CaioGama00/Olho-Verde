@@ -14,10 +14,11 @@ const login = async (email, password) => {
     email,
     password,
   });
-  if (response.data.accessToken) {
-    localStorage.setItem('user', JSON.stringify(response.data));
+  const payload = response.data;
+  if (payload?.accessToken) {
+    localStorage.setItem('user', JSON.stringify(payload));
   }
-  return response.data;
+  return payload;
 };
 
 const logout = () => {

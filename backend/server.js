@@ -6,17 +6,48 @@ const multer = require('multer');
 const axios = require('axios');
 
 const app = express();
-const PORT = 3001;
-const HUGGINGFACE_API_KEY = process.env.HUGGINGFACE_API_KEY; // Make sure to add this to your .env file
-if (!HUGGINGFACE_API_KEY) {
-    console.error('HUGGINGFACE_API_KEY is not set. Please add it to your .env file.');
-    process.exit(1);
+const PORT = process.env.PORT || 3001;
+const HUGGINGFACE_API_KEY = process.env.HUGGINGFACE_API_KEY; // Optional for local testing
+const IMAGE_CLASSIFICATION_ENABLED = Boolean(HUGGINGFACE_API_KEY);
+if (!IMAGE_CLASSIFICATION_ENABLED) {
+  console.warn('HUGGINGFACE_API_KEY not set. /api/classify-image will be disabled until you provide a key.');
 }
+
+const ADMIN_EMAILS = new Set(
+  (process.env.ADMIN_EMAILS || '')
+    .split(',')
+    .map((email) => email.trim().toLowerCase())
+    .filter(Boolean)
+);
+
+const REPORT_STATUSES = ['nova', 'em_analise', 'resolvida'];
+const DEFAULT_REPORT_STATUS = REPORT_STATUSES[0];
 
 const upload = multer({ storage: multer.memoryStorage() });
 
 app.use(cors());
 app.use(express.json());
+
+const hasAdminFlag = (metadata = {}) => {
+  const role = typeof metadata.role === 'string' ? metadata.role.toLowerCase() : null;
+  const roles = Array.isArray(metadata.roles)
+    ? metadata.roles.map((item) => (typeof item === 'string' ? item.toLowerCase() : item))
+    : [];
+  return (
+    metadata.is_admin === true ||
+    role === 'admin' ||
+    roles.includes('admin')
+  );
+};
+
+const isAdminUser = (user) => {
+  if (!user) return false;
+  if (hasAdminFlag(user.user_metadata) || hasAdminFlag(user.app_metadata)) {
+    return true;
+  }
+  const email = user.email?.toLowerCase();
+  return email ? ADMIN_EMAILS.has(email) : false;
+};
 
 // Middleware to verify Supabase JWT
 const authenticateToken = async (req, res, next) => {
@@ -32,21 +63,44 @@ const authenticateToken = async (req, res, next) => {
   }
 
   req.user = user;
+  req.isAdmin = isAdminUser(user);
   next();
+};
+
+const requireAdmin = (req, res, next) => {
+  if (!req.isAdmin) {
+    return res.status(403).json({ error: 'Acesso permitido apenas para administradores.' });
+  }
+  next();
+};
+
+const buildReportResponse = (report, { includeReporterContact = false } = {}) => {
+  const response = {
+    ...report,
+    status: report.status || DEFAULT_REPORT_STATUS,
+    position: {
+      lat: parseFloat(report.lat),
+      lng: parseFloat(report.lng)
+    }
+  };
+
+  if (includeReporterContact) {
+    response.reporterName = report.users?.name || null;
+    response.reporterEmail = report.users?.email || null;
+  }
+
+  return response;
 };
 
 // GET /api/reports - Get all reports
 app.get('/api/reports', async (req, res) => {
   try {
-    const { data, error } = await supabase.from('reports').select('*');
+    const { data, error } = await supabase
+      .from('reports')
+      .select('*')
+      .order('created_at', { ascending: false });
     if (error) throw error;
-    const reports = data.map(report => ({
-        ...report,
-        position: {
-            lat: parseFloat(report.lat),
-            lng: parseFloat(report.lng)
-        }
-    }));
+    const reports = data.map((report) => buildReportResponse(report));
     res.json(reports);
   } catch (err) {
     console.error(err);
@@ -61,80 +115,143 @@ app.post('/api/reports', authenticateToken, async (req, res) => {
     const { id: user_id } = req.user;
 
     try {
-        const { data, error } = await supabase
-            .from('reports')
-            .insert([{ problem, lat, lng, user_id }])
-            .select();
+    const { data, error } = await supabase
+        .from('reports')
+        .insert([{ problem, lat, lng, user_id, status: DEFAULT_REPORT_STATUS }])
+        .select();
 
-        if (error) throw error;
+    if (error) throw error;
 
-        const newReport = {
-            ...data[0],
-            position: {
-                lat: parseFloat(data[0].lat),
-                lng: parseFloat(data[0].lng)
-            }
-        }
-        res.status(201).json(newReport);
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: 'Internal server error' });
-    }
+    const newReport = buildReportResponse(data[0]);
+    res.status(201).json(newReport);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 // POST /api/reports/:id/vote - Vote on a report (protected)
 app.post('/api/reports/:id/vote', authenticateToken, async (req, res) => {
-    const reportId = parseInt(req.params.id, 10);
-    const { vote } = req.body; // expecting { vote: 'up' } or { vote: 'down' }
-    const { id: user_id } = req.user;
+  const reportId = parseInt(req.params.id, 10);
+  const { vote } = req.body; // expecting { vote: 'up' } | 'down' | null
+  const { id: user_id } = req.user;
 
-    let newVoteValue;
-    if (vote === 'up') {
-        newVoteValue = 1;
-    } else if (vote === 'down') {
-        newVoteValue = -1;
+  let voteValue;
+  if (vote === 'up') {
+    voteValue = 1;
+  } else if (vote === 'down') {
+    voteValue = -1;
+  } else if (vote === null || vote === 'none') {
+    voteValue = 0;
+  } else {
+    return res.status(400).json({ message: 'Invalid vote type' });
+  }
+
+  try {
+    const { data: report, error: reportError } = await supabase
+      .from('reports')
+      .select('upvotes, downvotes')
+      .eq('id', reportId)
+      .single();
+
+    if (reportError) throw reportError;
+    if (!report) return res.status(404).json({ message: 'Report not found' });
+
+    const { data: existingVote, error: existingError } = await supabase
+      .from('user_votes')
+      .select('vote_value')
+      .eq('user_id', user_id)
+      .eq('report_id', reportId)
+      .maybeSingle();
+
+    if (existingError) throw existingError;
+
+    let upvotes = report.upvotes || 0;
+    let downvotes = report.downvotes || 0;
+
+    if (!existingVote && voteValue === 0) {
+      return res.json({ upvotes, downvotes, user_vote: null });
+    }
+
+    if (!existingVote) {
+      if (voteValue === 1) upvotes += 1;
+      if (voteValue === -1) downvotes += 1;
+      await supabase
+        .from('user_votes')
+        .insert([{ user_id, report_id: reportId, vote_value: voteValue }]);
     } else {
-        return res.status(400).json({ message: 'Invalid vote type' });
-    }
-
-    try {
-        const { data, error } = await supabase.rpc('handle_vote', {
-            report_id_param: reportId,
-            user_id_param: user_id,
-            new_vote_value_param: newVoteValue,
+      if (existingVote.vote_value === voteValue) {
+        return res.json({
+          upvotes,
+          downvotes,
+          user_vote: voteValue === 1 ? 'up' : voteValue === -1 ? 'down' : null,
         });
+      }
 
-        if (error) throw error;
+      if (existingVote.vote_value === 1) upvotes -= 1;
+      if (existingVote.vote_value === -1) downvotes -= 1;
 
-        res.json(data);
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: 'Internal server error' });
+      if (voteValue === 0) {
+        await supabase
+          .from('user_votes')
+          .delete()
+          .eq('user_id', user_id)
+          .eq('report_id', reportId);
+      } else {
+        if (voteValue === 1) upvotes += 1;
+        if (voteValue === -1) downvotes += 1;
+        await supabase
+          .from('user_votes')
+          .update({ vote_value: voteValue })
+          .eq('user_id', user_id)
+          .eq('report_id', reportId);
+      }
     }
+
+    await supabase
+      .from('reports')
+      .update({ upvotes, downvotes })
+      .eq('id', reportId);
+
+    res.json({
+      upvotes,
+      downvotes,
+      user_vote: voteValue === 1 ? 'up' : voteValue === -1 ? 'down' : null,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 // POST /api/auth/register - Register a new user
 app.post('/api/auth/register', async (req, res) => {
-    const { name, email, password } = req.body;
+  const { name, email, password } = req.body;
 
-    try {
-        const { data, error } = await supabase.auth.signUp({
-            email,
-            password,
-            options: {
-                data: {
-                    name,
-                },
-            },
-        });
+  try {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          name,
+        },
+      },
+    });
 
-        if (error) throw error;
-
-        res.status(201).json({ message: 'User created successfully', user: data.user });
-    } catch (err) {
-        console.error(err);
-        res.status(400).json({ message: err.message });
+    if (error) {
+      throw error;
     }
+
+    if (data?.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+      return res.status(400).json({ message: 'Este email já está cadastrado.' });
+    }
+
+    res.status(201).json({ message: 'User created successfully', user: data.user });
+  } catch (err) {
+    console.error(err);
+    res.status(400).json({ message: err.message || 'Falha ao registrar usuário.' });
+  }
 });
 
 // POST /api/auth/login - Login a user
@@ -149,7 +266,11 @@ app.post('/api/auth/login', async (req, res) => {
 
         if (error) throw error;
 
-        res.json({ accessToken: data.session.access_token });
+        res.json({
+          accessToken: data.session.access_token,
+          user: data.user,
+          isAdmin: isAdminUser(data.user),
+        });
     } catch (err) {
         console.error(err);
         res.status(400).json({ message: err.message });
@@ -157,6 +278,9 @@ app.post('/api/auth/login', async (req, res) => {
 });
 
 app.post('/api/classify-image', upload.single('image'), async (req, res) => {
+    if (!IMAGE_CLASSIFICATION_ENABLED) {
+        return res.status(503).json({ error: 'Image classification is disabled. Configure HUGGINGFACE_API_KEY to enable it.' });
+    }
     if (!req.file) {
         return res.status(400).json({ error: 'No image file provided' });
     }
@@ -182,6 +306,111 @@ app.post('/api/classify-image', upload.single('image'), async (req, res) => {
         console.error('Error classifying image:', error.response ? error.response.data : error.message);
         res.status(500).json({ error: 'Failed to classify image' });
     }
+});
+
+// Admin: Fetch all reports with owner data
+app.get('/api/admin/reports', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('reports')
+      .select('*, users:users!reports_user_id_fkey(name, email)')
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+
+    res.json(data.map((report) => buildReportResponse(report, { includeReporterContact: true })));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Admin: Update report status
+app.patch('/api/admin/reports/:id/status', authenticateToken, requireAdmin, async (req, res) => {
+  const reportId = parseInt(req.params.id, 10);
+  const { status } = req.body;
+
+  if (!REPORT_STATUSES.includes(status)) {
+    return res.status(400).json({ error: 'Status inválido.' });
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('reports')
+      .update({ status })
+      .eq('id', reportId)
+      .select('*, users:users!reports_user_id_fkey(name, email)')
+      .single();
+
+    if (error) throw error;
+    res.json(buildReportResponse(data, { includeReporterContact: true }));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Admin: List users
+app.get('/api/admin/users', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { data, error } = await supabase.auth.admin.listUsers({ perPage: 200 });
+    if (error) throw error;
+
+    const users = data.users.map((user) => ({
+      id: user.id,
+      email: user.email,
+      name: user.user_metadata?.name || user.email,
+      created_at: user.created_at,
+      last_sign_in_at: user.last_sign_in_at,
+      banned_until: user.banned_until || null,
+    }));
+
+    res.json(users);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Admin: Block/Unblock user
+app.patch('/api/admin/users/:id/block', authenticateToken, requireAdmin, async (req, res) => {
+  const { id } = req.params;
+  const { block } = req.body;
+
+  if (typeof block !== 'boolean') {
+    return res.status(400).json({ error: 'O campo "block" deve ser booleano.' });
+  }
+
+  try {
+    const { data, error } = await supabase.auth.admin.updateUserById(id, {
+      ban_duration: block ? 'forever' : 'none',
+    });
+    if (error) throw error;
+
+    res.json({
+      id: data.id,
+      email: data.email,
+      name: data.user_metadata?.name || data.email,
+      banned_until: data.banned_until || null,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Admin: Delete user
+app.delete('/api/admin/users/:id', authenticateToken, requireAdmin, async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const { error } = await supabase.auth.admin.deleteUser(id);
+    if (error) throw error;
+
+    res.status(204).send();
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 app.listen(PORT, () => {

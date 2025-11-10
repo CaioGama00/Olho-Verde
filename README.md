@@ -11,6 +11,7 @@ Este projeto está sendo desenvolvido como parte da disciplina de MAC0332 - Enge
 ## 2. O Problema
 
 A cidade de São Paulo enfrenta desafios constantes como:
+
 *   Pontos de alagamento
 *   Acúmulo de lixo em locais inadequados
 *   Árvores com risco de queda
@@ -67,19 +68,25 @@ Para configurar e executar o projeto localmente, siga os passos abaixo:
     cd Olho-Verde
     ```
 
-2.  **Instale as dependências do Backend:**
+2.  **Configure as variáveis de ambiente do Backend (uma vez):**
+    - Copie `.env.example` (quando disponível) ou crie um arquivo `backend/.env` com suas chaves Supabase e HuggingFace (opcional para testes locais).
+
+3.  **Instale as dependências do Backend:**
     ```bash
     cd backend
     npm install
     cd ..
     ```
 
-3.  **Instale as dependências do Frontend:**
+4.  **Instale as dependências do Frontend:**
     ```bash
     cd frontend
     npm install
     cd ..
     ```
+
+5. **Configuração do Frontend (opcional, mas recomendado):**
+   - Crie um arquivo `frontend/.env.local` baseado em `frontend/.env.example` definindo `VITE_API_BASE_URL` para apontar para o backend que deseja usar (ex.: `http://localhost:3001/api`).
 
 ### Execução
 
