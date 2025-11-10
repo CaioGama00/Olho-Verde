@@ -4,13 +4,25 @@ const cors = require('cors');
 const supabase = require('./db');
 const multer = require('multer');
 const axios = require('axios');
-
 const app = express();
 const PORT = process.env.PORT || 3001;
 const HUGGINGFACE_API_KEY = process.env.HUGGINGFACE_API_KEY; // Optional for local testing
+const DEFAULT_HF_URL = 'https://router.huggingface.co/hf-inference/models/microsoft/resnet-50';
+const HUGGINGFACE_INFERENCE_URL = (() => {
+  const rawUrl = process.env.HUGGINGFACE_INFERENCE_URL;
+  if (!rawUrl) return DEFAULT_HF_URL;
+  if (rawUrl.includes('api-inference.huggingface.co')) {
+    console.warn(
+      'HUGGINGFACE_INFERENCE_URL aponta para api-inference (depreciado). Usando automaticamente o router.huggingface.co.'
+    );
+    return DEFAULT_HF_URL;
+  }
+  return rawUrl;
+})();
+const MOCK_CLASSIFICATION = process.env.MOCK_CLASSIFICATION === 'true';
 const IMAGE_CLASSIFICATION_ENABLED = Boolean(HUGGINGFACE_API_KEY);
-if (!IMAGE_CLASSIFICATION_ENABLED) {
-  console.warn('HUGGINGFACE_API_KEY not set. /api/classify-image will be disabled until you provide a key.');
+if (!IMAGE_CLASSIFICATION_ENABLED && !MOCK_CLASSIFICATION) {
+  console.warn('HUGGINGFACE_API_KEY não definido. /api/classify-image ficará desabilitado (ou ative MOCK_CLASSIFICATION=true para testes locais).');
 }
 
 const ADMIN_EMAILS = new Set(
@@ -277,36 +289,96 @@ app.post('/api/auth/login', async (req, res) => {
     }
 });
 
+const trashKeywords = [
+  'trash heap',
+  'trash pile',
+  'garbage pile',
+  'garbage heap',
+  'street trash',
+  'street garbage',
+  'street litter',
+  'roadside litter',
+  'illegal dumping',
+  'dumped trash',
+  'dumped garbage'
+];
+
+const classifyImageBuffer = async (file) => {
+  if (!IMAGE_CLASSIFICATION_ENABLED) {
+    if (MOCK_CLASSIFICATION) {
+      return { isTrash: (file.buffer.length % 3) === 0 };
+    }
+    const disabledError = new Error('IMAGE_CLASSIFICATION_DISABLED');
+    disabledError.status = 503;
+    throw disabledError;
+  }
+
+  const response = await axios.post(HUGGINGFACE_INFERENCE_URL, file.buffer, {
+    headers: {
+      Authorization: `Bearer ${HUGGINGFACE_API_KEY}`,
+      Accept: 'application/json',
+      'Content-Type': file.mimetype || 'application/octet-stream',
+      'X-Wait-For-Model': 'true',
+    },
+    responseType: 'json',
+    timeout: 60000,
+    validateStatus: (status) => status < 500,
+  });
+
+  if (response.status >= 400) {
+    const error = new Error('HF_INFERENCE_ERROR');
+    error.status = response.status;
+    error.data = response.data;
+    throw error;
+  }
+
+  const predictions = Array.isArray(response.data)
+    ? response.data
+    : Array.isArray(response.data?.labels)
+      ? response.data.labels
+      : [];
+
+  const isTrash = predictions.some(item =>
+    trashKeywords.some(keyword =>
+      (item.label || '').toLowerCase().includes(keyword)
+    )
+  );
+
+  return { isTrash };
+};
+
 app.post('/api/classify-image', upload.single('image'), async (req, res) => {
-    if (!IMAGE_CLASSIFICATION_ENABLED) {
-        return res.status(503).json({ error: 'Image classification is disabled. Configure HUGGINGFACE_API_KEY to enable it.' });
+  if (!req.file) {
+    return res.status(400).json({ error: 'No image file provided' });
+  }
+
+  if (!IMAGE_CLASSIFICATION_ENABLED && !MOCK_CLASSIFICATION) {
+    return res.status(503).json({ error: 'Image classification is disabled. Configure HUGGINGFACE_API_KEY ou defina MOCK_CLASSIFICATION=true para testes.' });
+  }
+
+  try {
+    const result = await classifyImageBuffer(req.file);
+    res.json(result);
+  } catch (error) {
+    const status = error.status || error.response?.status || 500;
+    const data = error.data || error.response?.data;
+    console.error('Error classifying image:', data || error.message);
+
+    let message = 'Failed to classify image';
+    if (error.message === 'IMAGE_CLASSIFICATION_DISABLED') {
+      message = 'Image classification is disabled.';
+    } else if (status === 401 || status === 403) {
+      message = 'HuggingFace API key inválida ou sem permissão.';
+    } else if (status === 410) {
+      message = 'Endpoint antigo depreciado. Atualize HUGGINGFACE_INFERENCE_URL para o roteador oficial.';
+    } else if (status === 415) {
+      message = 'Formato inválido: envie a imagem como multipart/form-data.';
     }
-    if (!req.file) {
-        return res.status(400).json({ error: 'No image file provided' });
-    }
 
-    try {
-        const response = await axios.post(
-            'https://api-inference.huggingface.co/models/microsoft/resnet-50',
-            req.file.buffer,
-            {
-                headers: {
-                    'Authorization': `Bearer ${HUGGINGFACE_API_KEY}`,
-                    'Content-Type': req.file.mimetype,
-                },
-            }
-        );
-
-        const trashKeywords = ['trash', 'garbage', 'waste', 'recycling', 'litter'];
-        const isTrash = response.data.some(item => trashKeywords.some(keyword => item.label.toLowerCase().includes(keyword)));
-
-        res.json({ isTrash });
-
-    } catch (error) {
-        console.error('Error classifying image:', error.response ? error.response.data : error.message);
-        res.status(500).json({ error: 'Failed to classify image' });
-    }
+    res.status(503).json({ error: message, details: data || null });
+  }
 });
+
 
 // Admin: Fetch all reports with owner data
 app.get('/api/admin/reports', authenticateToken, requireAdmin, async (req, res) => {

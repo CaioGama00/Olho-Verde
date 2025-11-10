@@ -2,6 +2,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import L from 'leaflet';
 import './ReportForm.css';
 
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ||
+  (import.meta.env.PROD
+    ? 'https://olho-verde.onrender.com/api'
+    : 'http://localhost:3001/api');
+
 function ReportForm({ position, onClose, onSubmit, problemTypes }) {
   const modalRef = useRef();
   const [selectedFile, setSelectedFile] = useState(null);
@@ -28,13 +34,14 @@ function ReportForm({ position, onClose, onSubmit, problemTypes }) {
     formData.append('image', selectedFile);
 
     try {
-      const response = await fetch('https://olho-verde.onrender.com/api/classify-image', {
+      const response = await fetch(`${API_BASE_URL.replace(/\/$/, '')}/classify-image`, {
         method: 'POST',
         body: formData,
       });
 
       if (!response.ok) {
-        throw new Error('Erro ao classificar a imagem.');
+        const errorPayload = await response.json().catch(() => ({}));
+        throw new Error(errorPayload?.error || 'Erro ao classificar a imagem.');
       }
 
       const result = await response.json();
