@@ -2,20 +2,29 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import authService from '../services/authService';
 
-const Navbar = ({ currentUser }) => {
+const Navbar = ({ currentUser, onLogout }) => {
   const navigate = useNavigate();
 
   const handleLogout = async () => {
-    await authService.logout();
+    if (onLogout) {
+      await onLogout();
+    } else {
+      await authService.logout();
+    }
     navigate('/login');
   };
+
+  const displayName = currentUser?.user?.user_metadata?.name || currentUser?.user?.email || currentUser?.email;
 
   return (
     <nav>
       <Link to="/">Início</Link>
       {currentUser ? (
         <div>
-          <span>{currentUser.user_metadata?.name || currentUser.email}</span>
+          {currentUser.isAdmin && (
+            <Link to="/admin">Painel Admin</Link>
+          )}
+          <span>{displayName}</span>
           <button onClick={handleLogout}>Sair</button>
         </div>
       ) : (

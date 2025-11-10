@@ -13,10 +13,41 @@ if (!HUGGINGFACE_API_KEY) {
     process.exit(1);
 }
 
+const ADMIN_EMAILS = new Set(
+  (process.env.ADMIN_EMAILS || '')
+    .split(',')
+    .map((email) => email.trim().toLowerCase())
+    .filter(Boolean)
+);
+
+const REPORT_STATUSES = ['nova', 'em_analise', 'resolvida'];
+const DEFAULT_REPORT_STATUS = REPORT_STATUSES[0];
+
 const upload = multer({ storage: multer.memoryStorage() });
 
 app.use(cors());
 app.use(express.json());
+
+const hasAdminFlag = (metadata = {}) => {
+  const role = typeof metadata.role === 'string' ? metadata.role.toLowerCase() : null;
+  const roles = Array.isArray(metadata.roles)
+    ? metadata.roles.map((item) => (typeof item === 'string' ? item.toLowerCase() : item))
+    : [];
+  return (
+    metadata.is_admin === true ||
+    role === 'admin' ||
+    roles.includes('admin')
+  );
+};
+
+const isAdminUser = (user) => {
+  if (!user) return false;
+  if (hasAdminFlag(user.user_metadata) || hasAdminFlag(user.app_metadata)) {
+    return true;
+  }
+  const email = user.email?.toLowerCase();
+  return email ? ADMIN_EMAILS.has(email) : false;
+};
 
 // Middleware to verify Supabase JWT
 const authenticateToken = async (req, res, next) => {
@@ -32,21 +63,44 @@ const authenticateToken = async (req, res, next) => {
   }
 
   req.user = user;
+  req.isAdmin = isAdminUser(user);
   next();
+};
+
+const requireAdmin = (req, res, next) => {
+  if (!req.isAdmin) {
+    return res.status(403).json({ error: 'Acesso permitido apenas para administradores.' });
+  }
+  next();
+};
+
+const buildReportResponse = (report, { includeReporterContact = false } = {}) => {
+  const response = {
+    ...report,
+    status: report.status || DEFAULT_REPORT_STATUS,
+    position: {
+      lat: parseFloat(report.lat),
+      lng: parseFloat(report.lng)
+    }
+  };
+
+  if (includeReporterContact) {
+    response.reporterName = report.users?.name || null;
+    response.reporterEmail = report.users?.email || null;
+  }
+
+  return response;
 };
 
 // GET /api/reports - Get all reports
 app.get('/api/reports', async (req, res) => {
   try {
-    const { data, error } = await supabase.from('reports').select('*');
+    const { data, error } = await supabase
+      .from('reports')
+      .select('*')
+      .order('created_at', { ascending: false });
     if (error) throw error;
-    const reports = data.map(report => ({
-        ...report,
-        position: {
-            lat: parseFloat(report.lat),
-            lng: parseFloat(report.lng)
-        }
-    }));
+    const reports = data.map((report) => buildReportResponse(report));
     res.json(reports);
   } catch (err) {
     console.error(err);
@@ -61,25 +115,19 @@ app.post('/api/reports', authenticateToken, async (req, res) => {
     const { id: user_id } = req.user;
 
     try {
-        const { data, error } = await supabase
-            .from('reports')
-            .insert([{ problem, lat, lng, user_id }])
-            .select();
+    const { data, error } = await supabase
+        .from('reports')
+        .insert([{ problem, lat, lng, user_id, status: DEFAULT_REPORT_STATUS }])
+        .select();
 
-        if (error) throw error;
+    if (error) throw error;
 
-        const newReport = {
-            ...data[0],
-            position: {
-                lat: parseFloat(data[0].lat),
-                lng: parseFloat(data[0].lng)
-            }
-        }
-        res.status(201).json(newReport);
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: 'Internal server error' });
-    }
+    const newReport = buildReportResponse(data[0]);
+    res.status(201).json(newReport);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 // POST /api/reports/:id/vote - Vote on a report (protected)
@@ -149,7 +197,11 @@ app.post('/api/auth/login', async (req, res) => {
 
         if (error) throw error;
 
-        res.json({ accessToken: data.session.access_token });
+        res.json({
+          accessToken: data.session.access_token,
+          user: data.user,
+          isAdmin: isAdminUser(data.user),
+        });
     } catch (err) {
         console.error(err);
         res.status(400).json({ message: err.message });
@@ -182,6 +234,111 @@ app.post('/api/classify-image', upload.single('image'), async (req, res) => {
         console.error('Error classifying image:', error.response ? error.response.data : error.message);
         res.status(500).json({ error: 'Failed to classify image' });
     }
+});
+
+// Admin: Fetch all reports with owner data
+app.get('/api/admin/reports', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('reports')
+      .select('*, users(name, email)')
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+
+    res.json(data.map((report) => buildReportResponse(report, { includeReporterContact: true })));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Admin: Update report status
+app.patch('/api/admin/reports/:id/status', authenticateToken, requireAdmin, async (req, res) => {
+  const reportId = parseInt(req.params.id, 10);
+  const { status } = req.body;
+
+  if (!REPORT_STATUSES.includes(status)) {
+    return res.status(400).json({ error: 'Status inválido.' });
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('reports')
+      .update({ status })
+      .eq('id', reportId)
+      .select('*, users(name, email)')
+      .single();
+
+    if (error) throw error;
+    res.json(buildReportResponse(data, { includeReporterContact: true }));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Admin: List users
+app.get('/api/admin/users', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { data, error } = await supabase.auth.admin.listUsers({ perPage: 200 });
+    if (error) throw error;
+
+    const users = data.users.map((user) => ({
+      id: user.id,
+      email: user.email,
+      name: user.user_metadata?.name || user.email,
+      created_at: user.created_at,
+      last_sign_in_at: user.last_sign_in_at,
+      banned_until: user.banned_until || null,
+    }));
+
+    res.json(users);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Admin: Block/Unblock user
+app.patch('/api/admin/users/:id/block', authenticateToken, requireAdmin, async (req, res) => {
+  const { id } = req.params;
+  const { block } = req.body;
+
+  if (typeof block !== 'boolean') {
+    return res.status(400).json({ error: 'O campo "block" deve ser booleano.' });
+  }
+
+  try {
+    const { data, error } = await supabase.auth.admin.updateUserById(id, {
+      ban_duration: block ? 'forever' : 'none',
+    });
+    if (error) throw error;
+
+    res.json({
+      id: data.id,
+      email: data.email,
+      name: data.user_metadata?.name || data.email,
+      banned_until: data.banned_until || null,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Admin: Delete user
+app.delete('/api/admin/users/:id', authenticateToken, requireAdmin, async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const { error } = await supabase.auth.admin.deleteUser(id);
+    if (error) throw error;
+
+    res.status(204).send();
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 app.listen(PORT, () => {

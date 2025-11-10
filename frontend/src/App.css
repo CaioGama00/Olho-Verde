@@ -131,6 +131,12 @@ nav button:hover {
   margin: 0 0 1rem 0;
 }
 
+.report-status {
+  margin: 0.5rem 0;
+  font-weight: 600;
+  color: var(--primary-color);
+}
+
 .report-button {
   background-color: var(--primary-color);
   color: white;

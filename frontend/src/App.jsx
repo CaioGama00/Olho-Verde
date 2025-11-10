@@ -12,8 +12,10 @@ import Navbar from './components/Navbar';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import LandingPage from './pages/LandingPage'; // Import LandingPage
+import AdminDashboard from './pages/AdminDashboard';
 import authService from './services/authService';
 import reportService from './services/reportService';
+import { getStatusLabel } from './utils/reportStatus';
 
 import './App.css';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
@@ -158,6 +160,7 @@ function ReportMarker({ report, currentUser }) {
         <div className="popup-content">
           <h4>Problema Reportado</h4>
           <p>{report.problem}</p>
+          <p className="report-status">Status: <strong>{getStatusLabel(report.status)}</strong></p>
           <div className="vote-controls">
             <button
               onClick={(e) => handleLocalVote(e, 'up')}
@@ -278,20 +281,20 @@ function LocationMarker({ currentUser }) {
 const initialMapPosition = [-23.55052, -46.633308]; // Define outside App
 
 function App() {
-  const [currentUser, setCurrentUser] = useState(undefined);
+  const [currentUser, setCurrentUser] = useState(null);
   const location = useLocation();
 
   useEffect(() => {
     const user = authService.getCurrentUser();
-    if (user) {
-      setCurrentUser(user);
-    }
+    setCurrentUser(user || null);
   }, []);
 
-  const disableMapInteraction = 
-    !currentUser || 
-    location.pathname === '/login' || 
-    location.pathname === '/register';
+  const overlayRoutes = ['/login', '/register', '/admin'];
+
+  const handleLogout = async () => {
+    await authService.logout();
+    setCurrentUser(null);
+  };
 
   return (
     <div className="app-container">
@@ -317,15 +320,19 @@ function App() {
           <FaRecycle className="app-logo" />
           <h1>Olho Verde</h1>
         </div>
-        <Navbar currentUser={currentUser} />
+        <Navbar currentUser={currentUser} onLogout={handleLogout} />
       </header>
 
-      <div className="app-content-overlay" style={{ pointerEvents: (location.pathname === '/login' || location.pathname === '/register') ? 'auto' : 'none' }}> {/* New wrapper for content */} 
+      <div
+        className="app-content-overlay"
+        style={{ pointerEvents: overlayRoutes.includes(location.pathname) ? 'auto' : 'none' }}
+      >
         <Routes>
           <Route path="/" element={null} /> {/* Handle home route */}
           {/* Login and Register pages will still be rendered as overlays */}
           <Route path="/login" element={<LoginPage setCurrentUser={setCurrentUser} />} />
           <Route path="/register" element={<RegisterPage />} />
+          <Route path="/admin" element={<AdminDashboard currentUser={currentUser} />} />
         </Routes>
       </div>
     </div>
