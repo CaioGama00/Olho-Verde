@@ -319,31 +319,6 @@ function App() {
 
   return (
     <div className="app-container">
-      <div className="map-shell">
-        <MapContainer 
-          center={initialMapPosition} 
-          zoom={13} 
-          scrollWheelZoom={isAuthenticated} 
-          doubleClickZoom={isAuthenticated} 
-          dragging={isAuthenticated} 
-          zoomControl={true} 
-          whenCreated={setMapInstance}
-          style={{ height: '100%', width: '100%', position: 'absolute', top: 0, left: 0, zIndex: 0 }}
-        >
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
-          {/* Render LocationMarker or LandingPage only on the home route */}
-          {location.pathname === '/' && (currentUser ? <LocationMarker currentUser={currentUser} /> : <LandingPage />)}
-        </MapContainer>
-        {!isAuthenticated && (
-          <div className="map-lock-overlay">
-            <p>Entre na sua conta para navegar e registrar novos pontos.</p>
-          </div>
-        )}
-      </div>
-
       <header className="app-header">
         <div className="app-logo-container">
           {isAuthenticated && (
@@ -358,6 +333,26 @@ function App() {
         </div>
         <Navbar currentUser={currentUser} onLogout={handleLogout} />
       </header>
+
+      <div className="map-shell">
+        <MapContainer 
+          center={initialMapPosition} 
+          zoom={13} 
+          scrollWheelZoom={true} 
+          doubleClickZoom={true} 
+          dragging={true} 
+          zoomControl={true} 
+          whenCreated={setMapInstance}
+          style={{ height: '100%', width: '100%', position: 'absolute', top: 0, left: 0, zIndex: 0 }}
+        >
+          <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          />
+          {/* Render LocationMarker or LandingPage only on the home route */}
+          {location.pathname === '/' && (currentUser ? <LocationMarker currentUser={currentUser} /> : <LandingPage />)}
+        </MapContainer>
+      </div>
 
       <div
         className="app-content-overlay"

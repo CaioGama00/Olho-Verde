@@ -6,11 +6,11 @@ const multer = require('multer');
 const axios = require('axios');
 
 const app = express();
-const PORT = 3001;
-const HUGGINGFACE_API_KEY = process.env.HUGGINGFACE_API_KEY; // Make sure to add this to your .env file
-if (!HUGGINGFACE_API_KEY) {
-    console.error('HUGGINGFACE_API_KEY is not set. Please add it to your .env file.');
-    process.exit(1);
+const PORT = process.env.PORT || 3001;
+const HUGGINGFACE_API_KEY = process.env.HUGGINGFACE_API_KEY; // Optional for local testing
+const IMAGE_CLASSIFICATION_ENABLED = Boolean(HUGGINGFACE_API_KEY);
+if (!IMAGE_CLASSIFICATION_ENABLED) {
+  console.warn('HUGGINGFACE_API_KEY not set. /api/classify-image will be disabled until you provide a key.');
 }
 
 const ADMIN_EMAILS = new Set(
@@ -278,6 +278,9 @@ app.post('/api/auth/login', async (req, res) => {
 });
 
 app.post('/api/classify-image', upload.single('image'), async (req, res) => {
+    if (!IMAGE_CLASSIFICATION_ENABLED) {
+        return res.status(503).json({ error: 'Image classification is disabled. Configure HUGGINGFACE_API_KEY to enable it.' });
+    }
     if (!req.file) {
         return res.status(400).json({ error: 'No image file provided' });
     }
