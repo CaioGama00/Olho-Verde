@@ -7,7 +7,7 @@ const axios = require('axios');
 const app = express();
 const PORT = process.env.PORT || 3001;
 const HUGGINGFACE_API_KEY = process.env.HUGGINGFACE_API_KEY;
-const HUGGINGFACE_MODEL = (process.env.HUGGINGFACE_MODEL || 'google/vit-base-patch16-224').trim();
+const HUGGINGFACE_MODEL = (process.env.HUGGINGFACE_MODEL || 'microsoft/resnet-50').trim();
 const HUGGINGFACE_INFERENCE_URL = (process.env.HUGGINGFACE_INFERENCE_URL || `https://api-inference.huggingface.co/models/${HUGGINGFACE_MODEL}`).trim();
 const IMAGE_CLASSIFICATION_ENABLED = Boolean(HUGGINGFACE_API_KEY);
 if (!IMAGE_CLASSIFICATION_ENABLED) {
@@ -36,41 +36,41 @@ const REPORT_CATEGORIES = [
   {
     id: 'alagamento',
     label: 'Alagamento',
-    keywords: ['flood', 'flooding', 'river', 'lake', 'canal', 'water', 'swamp', 'boat', 'ship'],
+    keywords: ['flood', 'flooding', 'river', 'lake', 'canal', 'water', 'swamp', 'boat', 'ship', 'amphibious vehicle'],
     failureMessage: 'A imagem não parece mostrar ruas ou calçadas alagadas. Tente registrar a água cobrindo a via.',
-    threshold: categoryThreshold('CATEGORY_THRESHOLD_ALAGAMENTO', 0.45),
+    threshold: categoryThreshold('CATEGORY_THRESHOLD_ALAGAMENTO', 0.1),
   },
   {
     id: 'foco_lixo',
     label: 'Foco de lixo',
-    keywords: ['trash', 'garbage', 'dump', 'landfill', 'dumpster', 'rubbish', 'litter', 'waste'],
+    keywords: ['trash', 'garbage', 'dump', 'landfill', 'dumpster', 'rubbish', 'litter', 'waste', 'dustcart', 'plastic bag'],
     failureMessage: 'A imagem não parece conter acúmulo de lixo. Procure focar nos sacos ou montes de resíduos.',
-    threshold: categoryThreshold('CATEGORY_THRESHOLD_LIXO', 0.45),
+    threshold: categoryThreshold('CATEGORY_THRESHOLD_LIXO', 0.1),
   },
   {
     id: 'arvore_queda',
     label: 'Árvore caída',
     keywords: ['tree', 'trunk', 'branch', 'log', 'forest', 'wood'],
     failureMessage: 'Não identificamos uma árvore caída ou tronco quebrado na foto. Mostre o tronco no chão ou prestes a cair.',
-    threshold: categoryThreshold('CATEGORY_THRESHOLD_ARVORE', 0.4),
+    threshold: categoryThreshold('CATEGORY_THRESHOLD_ARVORE', 0.1),
   },
   {
     id: 'bueiro_entupido',
     label: 'Bueiro entupido',
-    keywords: ['sewer', 'drain', 'manhole', 'gutter', 'culvert', 'pipe'],
+    keywords: ['sewer', 'drain', 'manhole', 'gutter', 'culvert', 'pipe', 'dustcart','plastic bag'],
     failureMessage: 'A imagem não evidencia um bueiro ou ralo entupido. Foque na tampa ou na grade obstruída.',
-    threshold: categoryThreshold('CATEGORY_THRESHOLD_BUEIRO', 0.35),
+    threshold: categoryThreshold('CATEGORY_THRESHOLD_BUEIRO', 0.1),
   },
   {
     id: 'buraco_via',
     label: 'Buraco na via',
-    keywords: ['pothole', 'crack', 'asphalt', 'road', 'street', 'ditch'],
+    keywords: ['pothole', 'crack', 'asphalt', 'road', 'street', 'ditch', 'hole', 'road surface', 'manhole'],
     failureMessage: 'Não conseguimos ver buracos ou rachaduras na via. Aproxime a câmera do dano no asfalto.',
-    threshold: categoryThreshold('CATEGORY_THRESHOLD_BURACO', 0.35),
+    threshold: categoryThreshold('CATEGORY_THRESHOLD_BURACO', 0.1),
   },
 ];
 
-const CATEGORY_DEFAULT_THRESHOLD = Number(process.env.CATEGORY_SCORE_THRESHOLD) || 0.4;
+const CATEGORY_DEFAULT_THRESHOLD = Number(process.env.CATEGORY_SCORE_THRESHOLD) || 0.1;
 
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -326,7 +326,7 @@ app.post('/api/auth/login', async (req, res) => {
     }
 });
 
-const classifyImageBuffer = async (file) => {
+const classifyImageBuffer = async (file, expectedCategoryId = null) => {
   if (!IMAGE_CLASSIFICATION_ENABLED) {
     const disabledError = new Error('IMAGE_CLASSIFICATION_DISABLED');
     disabledError.status = 503;
@@ -352,17 +352,17 @@ const classifyImageBuffer = async (file) => {
   }
 
   const matches = predictions
-    .map((prediction) => {
+    .flatMap((prediction) => {
       const label = (prediction.label || '').toLowerCase();
       const score = prediction.score || 0;
-      const category = REPORT_CATEGORIES.find((cat) =>
-        cat.keywords.some((keyword) => label.includes(keyword))
-      );
-      return { label, score, category };
+      return REPORT_CATEGORIES
+        .filter((cat) => cat.keywords.some((keyword) => label.includes(keyword)))
+        .map((category) => ({ label, score, category }));
     })
-    .filter((prediction) =>
-      prediction.category &&
-      prediction.score >= (prediction.category.threshold ?? CATEGORY_DEFAULT_THRESHOLD)
+    .filter(
+      (prediction) =>
+        prediction.category &&
+        prediction.score >= (prediction.category.threshold ?? CATEGORY_DEFAULT_THRESHOLD)
     )
     .sort((a, b) => b.score - a.score);
 
@@ -370,7 +370,7 @@ const classifyImageBuffer = async (file) => {
   console.log('Correspondências identificadas:', matches.slice(0, 5));
 
   return {
-    bestMatch: matches[0] || null,
+    bestMatch: matches.find((match) => match.category.id === expectedCategoryId) || matches[0] || null,
     topPrediction: predictions[0] || null,
   };
 };
@@ -388,7 +388,7 @@ app.post('/api/classify-image', upload.single('image'), async (req, res) => {
   const expectedCategory = REPORT_CATEGORIES.find((cat) => cat.id === expectedCategoryId);
 
   try {
-    const { bestMatch, topPrediction } = await classifyImageBuffer(req.file);
+    const { bestMatch, topPrediction } = await classifyImageBuffer(req.file, expectedCategoryId);
 
     if (!bestMatch) {
       const message = expectedCategory?.failureMessage ||
