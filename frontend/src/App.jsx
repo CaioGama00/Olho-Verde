@@ -3,7 +3,7 @@ import { Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { FaMapMarkerAlt, FaWater, FaTrashAlt, FaTree, FaThumbsUp, FaThumbsDown, FaRecycle } from 'react-icons/fa';
+import { FaMapMarkerAlt, FaWater, FaTrashAlt, FaTree, FaThumbsUp, FaThumbsDown, FaRecycle, FaRoad } from 'react-icons/fa';
 import { CgMoreVertical } from "react-icons/cg";
 import MarkerClusterGroup from 'react-leaflet-markercluster';
 
@@ -21,13 +21,43 @@ import './App.css';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 
-const problemTypes = {
-  "Alagamento": <FaWater />,
-  "Foco de lixo": <FaTrashAlt />,
-  "Árvores prestes a cair": <FaTree />,
-  "Bueiros entupidos": <CgMoreVertical />,
-  "Água parada": <FaWater />,
-};
+const problemCategories = [
+  {
+    id: 'alagamento',
+    label: 'Alagamento',
+    icon: <FaWater />,
+    failureMessage: 'A imagem não parece mostrar ruas ou calçadas alagadas. Tente registrar a água cobrindo a via.',
+  },
+  {
+    id: 'foco_lixo',
+    label: 'Foco de lixo',
+    icon: <FaTrashAlt />,
+    failureMessage: 'A imagem não parece conter acúmulo de lixo. Procure focar nos sacos ou montes de resíduos.',
+  },
+  {
+    id: 'arvore_queda',
+    label: 'Árvore caída',
+    icon: <FaTree />,
+    failureMessage: 'Não identificamos uma árvore caída ou tronco quebrado na foto. Mostre o tronco no chão ou prestes a cair.',
+  },
+  {
+    id: 'bueiro_entupido',
+    label: 'Bueiro entupido',
+    icon: <CgMoreVertical />,
+    failureMessage: 'A imagem não evidencia um bueiro entupido. Foque na tampa ou grade obstruída.',
+  },
+  {
+    id: 'buraco_via',
+    label: 'Buraco na via',
+    icon: <FaRoad />,
+    failureMessage: 'Não foi possível ver buracos ou rachaduras na via. Aproxime o foco do dano no asfalto.',
+  },
+];
+
+const problemTypes = problemCategories.reduce((acc, category) => {
+  acc[category.label] = category.icon;
+  return acc;
+}, {});
 
 const defaultIcon = L.divIcon({
   html: renderToStaticMarkup(<FaMapMarkerAlt style={{ fontSize: '24px', color: '#3498db' }} />),
@@ -271,7 +301,7 @@ function LocationMarker({ currentUser }) {
           position={newMarker.position}
           onClose={handleFormClose}
           onSubmit={handleFormSubmit}
-          problemTypes={Object.keys(problemTypes)}
+          problemCategories={problemCategories}
         />
       )}
     </>
