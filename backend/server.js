@@ -6,19 +6,9 @@ const multer = require('multer');
 const axios = require('axios');
 const app = express();
 const PORT = process.env.PORT || 3001;
-const HUGGINGFACE_API_KEY = process.env.HUGGINGFACE_API_KEY; // Optional for local testing
-const DEFAULT_HF_URL = 'https://router.huggingface.co/hf-inference/models/microsoft/resnet-50';
-const HUGGINGFACE_INFERENCE_URL = (() => {
-  const rawUrl = process.env.HUGGINGFACE_INFERENCE_URL;
-  if (!rawUrl) return DEFAULT_HF_URL;
-  if (rawUrl.includes('api-inference.huggingface.co')) {
-    console.warn(
-      'HUGGINGFACE_INFERENCE_URL aponta para api-inference (depreciado). Usando automaticamente o router.huggingface.co.'
-    );
-    return DEFAULT_HF_URL;
-  }
-  return rawUrl;
-})();
+const HUGGINGFACE_API_KEY = process.env.HUGGINGFACE_API_KEY;
+const HUGGINGFACE_MODEL = (process.env.HUGGINGFACE_MODEL || 'microsoft/resnet-50').trim();
+const HUGGINGFACE_INFERENCE_URL = (process.env.HUGGINGFACE_INFERENCE_URL || `https://api-inference.huggingface.co/models/${HUGGINGFACE_MODEL}`).trim();
 const IMAGE_CLASSIFICATION_ENABLED = Boolean(HUGGINGFACE_API_KEY);
 if (!IMAGE_CLASSIFICATION_ENABLED) {
   console.warn('HUGGINGFACE_API_KEY não definido. /api/classify-image ficará desabilitado.');
@@ -33,6 +23,54 @@ const ADMIN_EMAILS = new Set(
 
 const REPORT_STATUSES = ['nova', 'em_analise', 'resolvida'];
 const DEFAULT_REPORT_STATUS = REPORT_STATUSES[0];
+
+const categoryThreshold = (envVar, fallback) => {
+  const specific = Number(process.env[envVar]);
+  if (!Number.isNaN(specific) && specific > 0) return specific;
+  const shared = Number(process.env.CATEGORY_SCORE_THRESHOLD);
+  if (!Number.isNaN(shared) && shared > 0) return shared;
+  return fallback;
+};
+
+const REPORT_CATEGORIES = [
+  {
+    id: 'alagamento',
+    label: 'Alagamento',
+    keywords: ['flood', 'flooding', 'river', 'lake', 'canal', 'water', 'swamp', 'boat', 'ship', 'amphibious vehicle'],
+    failureMessage: 'A imagem não parece mostrar ruas ou calçadas alagadas. Tente registrar a água cobrindo a via.',
+    threshold: categoryThreshold('CATEGORY_THRESHOLD_ALAGAMENTO', 0.1),
+  },
+  {
+    id: 'foco_lixo',
+    label: 'Foco de lixo',
+    keywords: ['trash', 'garbage', 'dump', 'landfill', 'dumpster', 'rubbish', 'litter', 'waste', 'dustcart', 'plastic bag'],
+    failureMessage: 'A imagem não parece conter acúmulo de lixo. Procure focar nos sacos ou montes de resíduos.',
+    threshold: categoryThreshold('CATEGORY_THRESHOLD_LIXO', 0.1),
+  },
+  {
+    id: 'arvore_queda',
+    label: 'Árvore caída',
+    keywords: ['tree', 'trunk', 'branch', 'log', 'forest', 'wood'],
+    failureMessage: 'Não identificamos uma árvore caída ou tronco quebrado na foto. Mostre o tronco no chão ou prestes a cair.',
+    threshold: categoryThreshold('CATEGORY_THRESHOLD_ARVORE', 0.1),
+  },
+  {
+    id: 'bueiro_entupido',
+    label: 'Bueiro entupido',
+    keywords: ['sewer', 'drain', 'manhole', 'gutter', 'culvert', 'pipe', 'dustcart','plastic bag'],
+    failureMessage: 'A imagem não evidencia um bueiro ou ralo entupido. Foque na tampa ou na grade obstruída.',
+    threshold: categoryThreshold('CATEGORY_THRESHOLD_BUEIRO', 0.1),
+  },
+  {
+    id: 'buraco_via',
+    label: 'Buraco na via',
+    keywords: ['pothole', 'crack', 'asphalt', 'road', 'street', 'ditch', 'hole', 'road surface', 'manhole'],
+    failureMessage: 'Não conseguimos ver buracos ou rachaduras na via. Aproxime a câmera do dano no asfalto.',
+    threshold: categoryThreshold('CATEGORY_THRESHOLD_BURACO', 0.1),
+  },
+];
+
+const CATEGORY_DEFAULT_THRESHOLD = Number(process.env.CATEGORY_SCORE_THRESHOLD) || 0.1;
 
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -288,100 +326,104 @@ app.post('/api/auth/login', async (req, res) => {
     }
 });
 
-const TRASH_SCORE_THRESHOLD = Number(process.env.TRASH_SCORE_THRESHOLD) || 0.7;
-const TRASH_KEYWORDS = [
-  'trash',
-  'garbage',
-  'litter',
-  'waste',
-  'rubbish',
-  'trash heap',
-  'trash pile',
-  'garbage pile',
-  'garbage heap',
-  'street trash',
-  'street garbage',
-  'street litter',
-  'roadside litter',
-  'illegal dumping',
-  'dumped trash',
-  'dumped garbage',
-  'landfill',
-  'garbage dump',
-  'waste dump',
-];
-
-const classifyImageBuffer = async (file) => {
+const classifyImageBuffer = async (file, expectedCategoryId = null) => {
   if (!IMAGE_CLASSIFICATION_ENABLED) {
     const disabledError = new Error('IMAGE_CLASSIFICATION_DISABLED');
     disabledError.status = 503;
     throw disabledError;
   }
 
-  const response = await axios.post(HUGGINGFACE_INFERENCE_URL, file.buffer, {
-    headers: {
-      Authorization: `Bearer ${HUGGINGFACE_API_KEY}`,
-      Accept: 'application/json',
-      'Content-Type': file.mimetype || 'application/octet-stream',
-      'X-Wait-For-Model': 'true',
-    },
-    responseType: 'json',
-    timeout: 60000,
-    validateStatus: (status) => status < 500,
-  });
-
-  if (response.status >= 400) {
-    const error = new Error('HF_INFERENCE_ERROR');
-    error.status = response.status;
-    error.data = response.data;
-    throw error;
+  let predictions = [];
+  try {
+    const response = await axios.post(HUGGINGFACE_INFERENCE_URL, file.buffer, {
+      headers: {
+        Authorization: `Bearer ${HUGGINGFACE_API_KEY}`,
+        Accept: 'application/json',
+        'Content-Type': file.mimetype || 'application/octet-stream',
+      },
+      responseType: 'json',
+      timeout: 60000,
+    });
+    predictions = Array.isArray(response.data) ? response.data : [];
+  } catch (error) {
+    const fallback = new Error('HF_INFERENCE_ERROR');
+    fallback.data = error.response?.data;
+    throw fallback;
   }
 
-  const predictions = Array.isArray(response.data)
-    ? response.data
-    : Array.isArray(response.data?.labels)
-      ? response.data.labels
-      : [];
+  const matches = predictions
+    .flatMap((prediction) => {
+      const label = (prediction.label || '').toLowerCase();
+      const score = prediction.score || 0;
+      return REPORT_CATEGORIES
+        .filter((cat) => cat.keywords.some((keyword) => label.includes(keyword)))
+        .map((category) => ({ label, score, category }));
+    })
+    .filter(
+      (prediction) =>
+        prediction.category &&
+        prediction.score >= (prediction.category.threshold ?? CATEGORY_DEFAULT_THRESHOLD)
+    )
+    .sort((a, b) => b.score - a.score);
 
-  const sorted = [...predictions].sort((a, b) => (b.score || 0) - (a.score || 0));
-  const topPrediction = sorted[0];
-  const label = (topPrediction?.label || '').toLowerCase();
-  const keywordMatched = TRASH_KEYWORDS.some((keyword) => label.includes(keyword));
-  const isTrash = Boolean(
-    topPrediction &&
-    topPrediction.score >= TRASH_SCORE_THRESHOLD &&
-    keywordMatched
-  );
+  console.log('Predições recebidas:', predictions.slice(0, 5));
+  console.log('Correspondências identificadas:', matches.slice(0, 5));
 
-  return { isTrash, topPrediction };
+  return {
+    bestMatch: matches.find((match) => match.category.id === expectedCategoryId) || matches[0] || null,
+    topPrediction: predictions[0] || null,
+  };
 };
 
 app.post('/api/classify-image', upload.single('image'), async (req, res) => {
   if (!req.file) {
-    return res.status(400).json({ error: 'No image file provided' });
+    return res.status(400).json({ error: 'Nenhuma imagem foi enviada.' });
   }
 
   if (!IMAGE_CLASSIFICATION_ENABLED) {
-    return res.status(503).json({ error: 'Image classification is disabled. Configure HUGGINGFACE_API_KEY  para testes.' });
+    return res.status(503).json({ error: 'Classificação de imagem desativada. Configure HUGGINGFACE_API_KEY.' });
   }
 
+  const expectedCategoryId = req.body.expectedCategoryId;
+  const expectedCategory = REPORT_CATEGORIES.find((cat) => cat.id === expectedCategoryId);
+
   try {
-    const { isTrash, topPrediction } = await classifyImageBuffer(req.file);
-    res.json({ isTrash, topPrediction });
+    const { bestMatch, topPrediction } = await classifyImageBuffer(req.file, expectedCategoryId);
+
+    if (!bestMatch) {
+      const message = expectedCategory?.failureMessage ||
+        'Não conseguimos identificar o problema na imagem. Envie outra foto com mais detalhes.';
+      return res.status(422).json({ success: false, error: message, topPrediction });
+    }
+
+    if (expectedCategory && bestMatch.category.id !== expectedCategory.id) {
+      return res.status(422).json({
+        success: false,
+        error: expectedCategory.failureMessage,
+        detectedCategoryId: bestMatch.category.id,
+        detectedCategoryLabel: bestMatch.category.label,
+        confidence: bestMatch.score,
+        topPrediction,
+      });
+    }
+
+    res.json({
+      success: true,
+      detectedCategoryId: bestMatch.category.id,
+      detectedCategoryLabel: bestMatch.category.label,
+      confidence: bestMatch.score,
+      topPrediction,
+    });
   } catch (error) {
     const status = error.status || error.response?.status || 500;
     const data = error.data || error.response?.data;
     console.error('Error classifying image:', data || error.message);
 
-    let message = 'Failed to classify image';
+    let message = 'Falha ao classificar a imagem.';
     if (error.message === 'IMAGE_CLASSIFICATION_DISABLED') {
-      message = 'Image classification is disabled.';
+      message = 'Classificação desativada.';
     } else if (status === 401 || status === 403) {
       message = 'HuggingFace API key inválida ou sem permissão.';
-    } else if (status === 410) {
-      message = 'Endpoint antigo depreciado. Atualize HUGGINGFACE_INFERENCE_URL para o roteador oficial.';
-    } else if (status === 415) {
-      message = 'Formato inválido: envie a imagem como multipart/form-data.';
     }
 
     res.status(503).json({ error: message, details: data || null });

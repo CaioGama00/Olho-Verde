@@ -8,9 +8,10 @@ const API_BASE_URL =
     ? 'https://olho-verde.onrender.com/api'
     : 'http://localhost:3001/api');
 
-function ReportForm({ position, onClose, onSubmit, problemTypes }) {
+function ReportForm({ position, onClose, onSubmit, problemCategories }) {
   const modalRef = useRef();
   const [selectedFile, setSelectedFile] = useState(null);
+  const [selectedCategoryId, setSelectedCategoryId] = useState(problemCategories[0]?.id || '');
 
   useEffect(() => {
     if (modalRef.current) {
@@ -32,6 +33,9 @@ function ReportForm({ position, onClose, onSubmit, problemTypes }) {
 
     const formData = new FormData();
     formData.append('image', selectedFile);
+    formData.append('expectedCategoryId', selectedCategoryId);
+
+    const selectedCategory = problemCategories.find((cat) => cat.id === selectedCategoryId);
 
     try {
       const response = await fetch(`${API_BASE_URL.replace(/\/$/, '')}/classify-image`, {
@@ -41,16 +45,22 @@ function ReportForm({ position, onClose, onSubmit, problemTypes }) {
 
       if (!response.ok) {
         const errorPayload = await response.json().catch(() => ({}));
+        if (response.status === 422 && errorPayload?.error) {
+          alert(errorPayload.error);
+          return;
+        }
         throw new Error(errorPayload?.error || 'Erro ao classificar a imagem.');
       }
 
       const result = await response.json();
 
-      if (result.isTrash) {
-        const selectedProblem = event.target.elements.problemType.value;
-        onSubmit(selectedProblem);
+      if (result.success) {
+        const confirmedCategory = problemCategories.find(
+          (category) => category.id === result.detectedCategoryId
+        ) || selectedCategory;
+        onSubmit(confirmedCategory?.label || selectedCategory?.label || '');
       } else {
-        alert('A imagem não parece conter lixo. O relatório não foi enviado.');
+        alert(result.error || selectedCategory?.failureMessage || 'A imagem não corresponde ao problema selecionado.');
       }
     } catch (error) {
       console.error('Erro:', error);
@@ -65,9 +75,14 @@ function ReportForm({ position, onClose, onSubmit, problemTypes }) {
         <p>Localização: {position.lat.toFixed(4)}, {position.lng.toFixed(4)}</p>
         <form onSubmit={handleSubmit}>
           <label htmlFor="problemType">Selecione o tipo de problema:</label>
-          <select id="problemType" name="problemType">
-            {problemTypes.map(type => (
-              <option key={type} value={type}>{type}</option>
+          <select
+            id="problemType"
+            name="problemType"
+            value={selectedCategoryId}
+            onChange={(event) => setSelectedCategoryId(event.target.value)}
+          >
+            {problemCategories.map((category) => (
+              <option key={category.id} value={category.id}>{category.label}</option>
             ))}
           </select>
           <label htmlFor="image">Selecione uma imagem:</label>
