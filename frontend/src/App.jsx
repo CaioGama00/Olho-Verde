@@ -13,6 +13,7 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import LandingPage from './pages/LandingPage'; // Import LandingPage
 import AdminDashboard from './pages/AdminDashboard';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 import authService from './services/authService';
 import reportService from './services/reportService';
 import { getStatusLabel } from './utils/reportStatus';
@@ -317,11 +318,26 @@ function App() {
   const navigate = useNavigate();
 
   useEffect(() => {
+    if (!location.hash || location.pathname === '/reset-password') {
+      return;
+    }
+
+    const params = new URLSearchParams(location.hash.replace(/^#/, ''));
+    const type = params.get('type');
+    const accessToken = params.get('access_token');
+
+    if (type === 'recovery' && accessToken) {
+      // Recovery emails may still point to /login, so force the dedicated reset route.
+      navigate(`/reset-password${location.search}${location.hash}`, { replace: true });
+    }
+  }, [location, navigate]);
+
+  useEffect(() => {
     const user = authService.getCurrentUser();
     setCurrentUser(user || null);
   }, []);
 
-  const overlayRoutes = ['/login', '/register', '/admin'];
+  const overlayRoutes = ['/login', '/register', '/admin', '/reset-password'];
   const isAuthenticated = Boolean(currentUser);
 
   useEffect(() => {
@@ -393,6 +409,7 @@ function App() {
           {/* Login and Register pages will still be rendered as overlays */}
           <Route path="/login" element={<LoginPage setCurrentUser={setCurrentUser} />} />
           <Route path="/register" element={<RegisterPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/admin" element={<AdminDashboard currentUser={currentUser} />} />
         </Routes>
       </div>

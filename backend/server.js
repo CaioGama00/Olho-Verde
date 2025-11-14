@@ -14,6 +14,22 @@ if (!IMAGE_CLASSIFICATION_ENABLED) {
   console.warn('HUGGINGFACE_API_KEY não definido. /api/classify-image ficará desabilitado.');
 }
 
+const normalizeBaseUrl = (input, fallback) => {
+  const base = (input || fallback || '').trim();
+  if (!base) {
+    return '';
+  }
+  return base.endsWith('/') ? base.slice(0, -1) : base;
+};
+
+const FRONTEND_BASE_URL = normalizeBaseUrl(
+  process.env.FRONTEND_BASE_URL || process.env.FRONTEND_URL,
+  'http://localhost:5173'
+);
+
+const PASSWORD_RESET_REDIRECT_URL = (process.env.PASSWORD_RESET_REDIRECT_URL ||
+  `${FRONTEND_BASE_URL || 'http://localhost:5173'}/reset-password`).trim();
+
 const ADMIN_EMAILS = new Set(
   (process.env.ADMIN_EMAILS || '')
     .split(',')
@@ -324,6 +340,64 @@ app.post('/api/auth/login', async (req, res) => {
         console.error(err);
         res.status(400).json({ message: err.message });
     }
+});
+
+app.post('/api/auth/password-reset/request', async (req, res) => {
+  const { email } = req.body;
+
+  if (!email) {
+    return res.status(400).json({ message: 'O email é obrigatório.' });
+  }
+
+  try {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: PASSWORD_RESET_REDIRECT_URL,
+    });
+
+    if (error) throw error;
+
+    res.json({
+      message: 'Se encontrarmos este email, enviaremos um link de redefinição nos próximos minutos.',
+    });
+  } catch (err) {
+    console.error('Erro ao solicitar redefinição de senha:', err);
+    res.status(400).json({
+      message: err.message || 'Não foi possível iniciar a redefinição de senha.',
+    });
+  }
+});
+
+app.post('/api/auth/password-reset/confirm', async (req, res) => {
+  const { accessToken, newPassword } = req.body;
+
+  if (!accessToken || !newPassword) {
+    return res.status(400).json({ message: 'Token e nova senha são obrigatórios.' });
+  }
+
+  try {
+    const { data: { user }, error } = await supabase.auth.getUser(accessToken);
+
+    if (error) {
+      throw error;
+    }
+
+    if (!user) {
+      return res.status(400).json({ message: 'Token inválido ou expirado.' });
+    }
+
+    const { error: updateError } = await supabase.auth.admin.updateUserById(user.id, {
+      password: newPassword,
+    });
+
+    if (updateError) throw updateError;
+
+    res.json({ message: 'Senha atualizada com sucesso. Faça login novamente.' });
+  } catch (err) {
+    console.error('Erro ao confirmar redefinição de senha:', err);
+    res.status(400).json({
+      message: err.message || 'Não foi possível atualizar a senha.',
+    });
+  }
 });
 
 const classifyImageBuffer = async (file, expectedCategoryId = null) => {

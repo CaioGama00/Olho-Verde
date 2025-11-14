@@ -96,3 +96,18 @@
   margin-top: 1rem;
   color: #d93025;
 }
+
+.login-links {
+  margin-top: 1rem;
+  text-align: right;
+}
+
+.login-links a {
+  color: var(--primary-color);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.login-links a:hover {
+  text-decoration: underline;
+}
