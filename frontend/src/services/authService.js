@@ -29,9 +29,21 @@ const getCurrentUser = () => {
   return JSON.parse(localStorage.getItem('user'));
 };
 
+const requestPasswordReset = async (email) => {
+  const response = await api.post('/auth/password-reset/request', { email });
+  return response.data;
+};
+
+const confirmPasswordReset = async (accessToken, newPassword) => {
+  const response = await api.post('/auth/password-reset/confirm', { accessToken, newPassword });
+  return response.data;
+};
+
 export default {
   register,
   login,
   logout,
   getCurrentUser,
+  requestPasswordReset,
+  confirmPasswordReset,
 };

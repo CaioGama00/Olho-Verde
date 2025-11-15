@@ -9,6 +9,8 @@ O backend fornece as seguintes APIs:
 *   **Autenticação de Usuários:**
     *   `POST /api/auth/register`: Registro de novos usuários.
     *   `POST /api/auth/login`: Login de usuários existentes.
+    *   `POST /api/auth/password-reset/request`: Solicita o envio de um email de redefinição de senha.
+    *   `POST /api/auth/password-reset/confirm`: Valida o token recebido por email e define uma nova senha.
 
 *   **Gerenciamento de Reports:**
     *   `GET /api/reports`: Obtém todos os reports.
@@ -17,7 +19,14 @@ O backend fornece as seguintes APIs:
 
 ## Armazenamento de Dados
 
-Os dados são armazenados em um arquivo `db.json`, simulando um banco de dados para fins de desenvolvimento.
+Os dados de usuários e reports ficam no Supabase configurado via variáveis de ambiente.
+
+## Variáveis de ambiente úteis
+
+Além das chaves do Supabase e HuggingFace, configure também:
+
+* `FRONTEND_BASE_URL`: URL base do frontend (ex.: `http://localhost:5173`). Usada para montar o link padrão de redefinição de senha.
+* `PASSWORD_RESET_REDIRECT_URL`: URL completa para onde o Supabase deve redirecionar o usuário após clicar no link enviado por email (ex.: `http://localhost:5173/reset-password`).
 
 ## Como Executar Localmente
 

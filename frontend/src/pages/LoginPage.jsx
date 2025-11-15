@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import authService from '../services/authService';
 import './LoginPage.css';
@@ -43,6 +43,9 @@ const LoginPage = ({ setCurrentUser }) => {
           </div>
           <button type="submit" className="login-button">Entrar</button>
         </form>
+        <div className="login-links">
+          <Link to="/reset-password">Esqueceu a senha?</Link>
+        </div>
         {message && <p className="message">{message}</p>}
       </div>
     </div>
