@@ -44,7 +44,8 @@ const ResetPasswordPage = () => {
     event.preventDefault();
     resetState();
 
-    if (!email.trim()) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email.trim() || !emailRegex.test(email.trim())) {
       setMessage('Informe um email válido.');
       setIsError(true);
       return;
