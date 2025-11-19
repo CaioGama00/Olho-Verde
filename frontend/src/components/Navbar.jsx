@@ -24,6 +24,7 @@ const Navbar = ({ currentUser, onLogout }) => {
           {currentUser.isAdmin && (
             <Link to="/admin">Painel Admin</Link>
           )}
+          <Link to="/minhas-denuncias">Minhas Denúncias</Link>
           <span>{displayName}</span>
           <button onClick={handleLogout}>Sair</button>
         </div>

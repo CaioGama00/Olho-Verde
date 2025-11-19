@@ -12,7 +12,7 @@ export const REPORT_STATUS_OPTIONS = [
 
 export const getStatusLabel = (statusValue) => {
   if (!statusValue) {
-    return 'Indefinido';
+    return '';
   }
   const option = REPORT_STATUS_OPTIONS.find((item) => item.value === statusValue);
   return option ? option.label : statusValue;

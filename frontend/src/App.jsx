@@ -17,6 +17,7 @@ import ResetPasswordPage from './pages/ResetPasswordPage';
 import authService from './services/authService';
 import reportService from './services/reportService';
 import { getStatusLabel } from './utils/reportStatus';
+import MinhasDenuncias from './pages/MyReportsPage';
 
 import './App.css';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
@@ -337,7 +338,7 @@ function App() {
     setCurrentUser(user || null);
   }, []);
 
-  const overlayRoutes = ['/login', '/register', '/admin', '/reset-password'];
+  const overlayRoutes = ['/login', '/register', '/admin', '/reset-password', '/minhas-denuncias'];
   const isAuthenticated = Boolean(currentUser);
 
   useEffect(() => {
@@ -411,6 +412,7 @@ function App() {
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/admin" element={<AdminDashboard currentUser={currentUser} />} />
+          <Route path="/minhas-denuncias" element={<MinhasDenuncias currentUser={currentUser} />} />
         </Routes>
       </div>
     </div>
