@@ -10,18 +10,24 @@ const RegisterPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleRegister = async (e) => {
     e.preventDefault();
+    if (isSubmitting) return;
     setMessage('');
     setError(false);
+    setIsSubmitting(true);
     try {
       const response = await authService.register(name, email, password);
       setMessage(response.message);
       setError(false);
     } catch (error) {
-      setMessage('Falha no cadastro: ' + error.response.data.message);
+      const reason = error?.response?.data?.message || 'Não foi possível cadastrar agora.';
+      setMessage('Falha no cadastro: ' + reason);
       setError(true);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -47,7 +53,9 @@ const RegisterPage = () => {
               </span>
             </div>
           </div>
-          <button type="submit" className="register-button">Criar Conta</button>
+          <button type="submit" className="register-button" disabled={isSubmitting}>
+            {isSubmitting ? 'Enviando...' : 'Criar Conta'}
+          </button>
         </form>
         {message && <p className={`message ${error ? '' : 'success'}`}>{message}</p>}
       </div>

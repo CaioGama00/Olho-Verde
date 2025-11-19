@@ -9,7 +9,38 @@ const MyReportsPage = ({ currentUser }) => {
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [addressMap, setAddressMap] = useState({});
   const navigate = useNavigate();
+  const fallbackAddress = 'Endereço aproximado indisponível';
+
+  const getAddress = async (lat, lng) => {
+    const key = `${lat.toFixed(5)},${lng.toFixed(5)}`;
+    if (addressMap[key]) return addressMap[key];
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`, {
+        headers: { 'Accept-Language': 'pt-BR', 'User-Agent': 'Olho-Verde' },
+      });
+      const data = await res.json();
+      const label =
+        data?.address?.road ||
+        data?.address?.pedestrian ||
+        data?.address?.suburb ||
+        data?.display_name ||
+        '';
+      const formatted = label ? label : fallbackAddress;
+      setAddressMap((prev) => ({ ...prev, [key]: formatted }));
+      return formatted;
+    } catch {
+      return fallbackAddress;
+    }
+  };
+
+  const fetchAddresses = (items) => {
+    const toFetch = items.filter(
+      (r) => r.position && typeof r.position.lat === 'number' && typeof r.position.lng === 'number'
+    );
+    toFetch.forEach((r) => getAddress(r.position.lat, r.position.lng));
+  };
 
   useEffect(() => {
     const fetchMyReports = async () => {
@@ -22,6 +53,7 @@ const MyReportsPage = ({ currentUser }) => {
         // filter safely; if no reports exist, set empty array (no error)
         const myReports = allReports.filter((r) => String(r.user_id) === String(myId));
         setReports(myReports);
+        fetchAddresses(myReports);
       } catch (error) {
         console.error("Erro ao buscar meus reports:", error);
         setError("Erro ao carregar suas denúncias. Tente novamente.");
@@ -48,6 +80,7 @@ const MyReportsPage = ({ currentUser }) => {
           const myId = currentUser?.user?.id || currentUser?.id;
           const myReports = allReports.filter((r) => String(r.user_id) === String(myId));
           setReports(myReports);
+          fetchAddresses(myReports);
         } catch (error) {
           console.error("Erro ao buscar meus reports:", error);
           setError("Erro ao carregar suas denúncias. Tente novamente.");
@@ -105,29 +138,33 @@ const MyReportsPage = ({ currentUser }) => {
       ) : (
         <div className="my-reports-grid">
           {reports.map(report => (
-            <div key={report.id} className="report-card">
+            <div
+              key={report.id}
+              className="report-card"
+              onClick={() => navigate(`/?reportId=${report.id}`)}
+              role="button"
+              tabIndex={0}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  navigate(`/?reportId=${report.id}`);
+                }
+              }}
+            >
               <div className="report-card-header">
                 <h3>{report.problem}</h3>
-                {
-                  // Determine effective status: remove "nova" if report is older than 1 day
-                  (() => {
-                    const createdAt = report.created_at ? new Date(report.created_at) : null;
-                    const isOlderThan1Day = createdAt ? (Date.now() - createdAt.getTime()) > 24 * 60 * 60 * 1000 : false;
-                    const effectiveStatus = report.status === 'nova' && isOlderThan1Day ? null : report.status;
-                    const cssStatus = effectiveStatus || 'indefinido';
-                    return (
-                      <span className={`report-status status-${cssStatus}`}>
-                        {getStatusLabel ? getStatusLabel(effectiveStatus) : effectiveStatus}
-                      </span>
-                    );
-                  })()
-                }
+                <span className={`report-status status-${report.status || 'indefinido'}`}>
+                  {getStatusLabel ? getStatusLabel(report.status) : report.status || 'Indefinido'}
+                </span>
               </div>
               
               <div className="report-details">
                 <div className="report-detail-item">
-                  <strong>Localização</strong>
-                  <span>{report.position?.lat?.toFixed(4)}, {report.position?.lng?.toFixed(4)}</span>
+                  <strong>Localização aproximada</strong>
+                  <span>
+                    {report.position?.lat?.toFixed(4) && report.position?.lng?.toFixed(4)
+                      ? `${report.position.lat.toFixed(4)}, ${report.position.lng.toFixed(4)}`
+                      : '—'}
+                  </span>
                 </div>
                 <div className="report-detail-item">
                   <strong>Data</strong>

@@ -5,8 +5,8 @@ export const REPORT_STATUS = {
 };
 
 export const REPORT_STATUS_OPTIONS = [
-  { value: REPORT_STATUS.NEW, label: 'Nova' },
-  { value: REPORT_STATUS.IN_PROGRESS, label: 'Em análise' },
+  { value: REPORT_STATUS.NEW, label: 'Recebida' },
+  { value: REPORT_STATUS.IN_PROGRESS, label: 'Em andamento' },
   { value: REPORT_STATUS.RESOLVED, label: 'Resolvida' },
 ];
 

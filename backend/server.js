@@ -114,6 +114,54 @@ const isAdminUser = (user) => {
   return email ? ADMIN_EMAILS.has(email) : false;
 };
 
+const getUserFromRequest = async (req) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) return null;
+
+  const { data: { user }, error } = await supabase.auth.getUser(token);
+  if (error || !user) {
+    return null;
+  }
+
+  return user;
+};
+
+const extractUserProfile = (user) => {
+  if (!user) {
+    return { name: null, email: null };
+  }
+
+  const rawMeta = user.raw_user_meta_data || user.user_metadata || {};
+  const name = user.name || rawMeta.name || null;
+  const email = user.email || rawMeta.email || null;
+
+  return { name, email };
+};
+
+const fetchUserProfilesByIds = async (userIds = []) => {
+  const uniqueIds = Array.from(new Set(userIds.filter(Boolean)));
+  if (uniqueIds.length === 0) {
+    return new Map();
+  }
+
+  const profileEntries = await Promise.all(
+    uniqueIds.map(async (id) => {
+      try {
+        const { data, error } = await supabase.auth.admin.getUserById(id);
+        if (error) throw error;
+        return [id, data?.user || null];
+      } catch (err) {
+        console.error(`Falha ao buscar perfil do usuário ${id}:`, err?.message || err);
+        return [id, null];
+      }
+    })
+  );
+
+  return new Map(profileEntries);
+};
+
 // Middleware to verify Supabase JWT
 const authenticateToken = async (req, res, next) => {
   const authHeader = req.headers['authorization'];
@@ -150,8 +198,9 @@ const buildReportResponse = (report, { includeReporterContact = false } = {}) =>
   };
 
   if (includeReporterContact) {
-    response.reporterName = report.users?.name || null;
-    response.reporterEmail = report.users?.email || null;
+    const reporterProfile = extractUserProfile(report.users);
+    response.reporterName = reporterProfile.name;
+    response.reporterEmail = reporterProfile.email;
   }
 
   return response;
@@ -160,12 +209,38 @@ const buildReportResponse = (report, { includeReporterContact = false } = {}) =>
 // GET /api/reports - Get all reports
 app.get('/api/reports', async (req, res) => {
   try {
+    const currentUser = await getUserFromRequest(req);
+    const currentUserId = currentUser?.id || null;
+
     const { data, error } = await supabase
       .from('reports')
       .select('*')
       .order('created_at', { ascending: false });
     if (error) throw error;
-    const reports = data.map((report) => buildReportResponse(report));
+
+    let voteMap = new Map();
+    if (currentUserId) {
+      const { data: votes, error: voteError } = await supabase
+        .from('user_votes')
+        .select('report_id, vote_value')
+        .eq('user_id', currentUserId);
+
+      if (voteError) throw voteError;
+      voteMap = new Map(
+        (votes || []).map((vote) => [vote.report_id, vote.vote_value])
+      );
+    }
+
+    const reports = data.map((report) => {
+      const response = buildReportResponse(report);
+      if (voteMap.has(report.id)) {
+        const voteValue = voteMap.get(report.id);
+        response.user_vote = voteValue === 1 ? 'up' : voteValue === -1 ? 'down' : null;
+      } else {
+        response.user_vote = null;
+      }
+      return response;
+    });
     res.json(reports);
   } catch (err) {
     console.error(err);
@@ -187,7 +262,10 @@ app.post('/api/reports', authenticateToken, async (req, res) => {
 
     if (error) throw error;
 
-    const newReport = buildReportResponse(data[0]);
+    const newReport = {
+      ...buildReportResponse(data[0]),
+      user_vote: null,
+    };
     res.status(201).json(newReport);
   } catch (err) {
     console.error(err);
@@ -510,11 +588,19 @@ app.get('/api/admin/reports', authenticateToken, requireAdmin, async (req, res) 
   try {
     const { data, error } = await supabase
       .from('reports')
-      .select('*, users:users!reports_user_id_fkey(name, email)')
+      .select('*')
       .order('created_at', { ascending: false });
     if (error) throw error;
 
-    res.json(data.map((report) => buildReportResponse(report, { includeReporterContact: true })));
+    const profileMap = await fetchUserProfilesByIds(data.map((report) => report.user_id));
+    const enriched = data.map((report) =>
+      buildReportResponse(
+        { ...report, users: profileMap.get(report.user_id) || null },
+        { includeReporterContact: true }
+      )
+    );
+
+    res.json(enriched);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Internal server error' });
@@ -535,11 +621,15 @@ app.patch('/api/admin/reports/:id/status', authenticateToken, requireAdmin, asyn
       .from('reports')
       .update({ status })
       .eq('id', reportId)
-      .select('*, users:users!reports_user_id_fkey(name, email)')
+      .select('*')
       .single();
 
     if (error) throw error;
-    res.json(buildReportResponse(data, { includeReporterContact: true }));
+
+    const profileMap = await fetchUserProfilesByIds([data.user_id]);
+    const reportWithUser = { ...data, users: profileMap.get(data.user_id) || null };
+
+    res.json(buildReportResponse(reportWithUser, { includeReporterContact: true }));
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Internal server error' });

@@ -12,6 +12,7 @@ function ReportForm({ position, onClose, onSubmit, problemCategories }) {
   const modalRef = useRef();
   const [selectedFile, setSelectedFile] = useState(null);
   const [selectedCategoryId, setSelectedCategoryId] = useState(problemCategories[0]?.id || '');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (modalRef.current) {
@@ -26,10 +27,14 @@ function ReportForm({ position, onClose, onSubmit, problemCategories }) {
   const handleSubmit = async (event) => {
     event.preventDefault();
 
+    if (isSubmitting) return;
+
     if (!selectedFile) {
       alert('Por favor, selecione uma imagem.');
       return;
     }
+
+    setIsSubmitting(true);
 
     const formData = new FormData();
     formData.append('image', selectedFile);
@@ -58,13 +63,15 @@ function ReportForm({ position, onClose, onSubmit, problemCategories }) {
         const confirmedCategory = problemCategories.find(
           (category) => category.id === result.detectedCategoryId
         ) || selectedCategory;
-        onSubmit(confirmedCategory?.label || selectedCategory?.label || '');
+        await onSubmit(confirmedCategory?.label || selectedCategory?.label || '');
       } else {
         alert(result.error || selectedCategory?.failureMessage || 'A imagem não corresponde ao problema selecionado.');
       }
     } catch (error) {
       console.error('Erro:', error);
       alert('Ocorreu um erro ao enviar o relatório.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -88,7 +95,9 @@ function ReportForm({ position, onClose, onSubmit, problemCategories }) {
           <label htmlFor="image">Selecione uma imagem:</label>
           <input type="file" id="image" name="image" accept="image/*" onChange={handleFileChange} />
           <div className="modal-actions">
-            <button type="submit" className="modal-button submit">Enviar</button>
+            <button type="submit" className="modal-button submit" disabled={isSubmitting}>
+              {isSubmitting ? 'Enviando...' : 'Enviar'}
+            </button>
             <button type="button" onClick={onClose} className="modal-button cancel">Cancelar</button>
           </div>
         </form>

@@ -111,3 +111,8 @@
 .modal-button:active {
     transform: scale(0.98);
 }
+
+.modal-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.75;
+}

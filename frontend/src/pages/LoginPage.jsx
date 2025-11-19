@@ -9,17 +9,23 @@ const LoginPage = ({ setCurrentUser }) => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [message, setMessage] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    if (isSubmitting) return;
     setMessage('');
+    setIsSubmitting(true);
     try {
       const user = await authService.login(email, password);
       setCurrentUser(user);
       navigate('/');
     } catch (error) {
-      setMessage('Falha no login: ' + error.response.data.message);
+      const reason = error?.response?.data?.message || 'Não foi possível acessar agora.';
+      setMessage('Falha no login: ' + reason);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -41,7 +47,9 @@ const LoginPage = ({ setCurrentUser }) => {
               </span>
             </div>
           </div>
-          <button type="submit" className="login-button">Entrar</button>
+          <button type="submit" className="login-button" disabled={isSubmitting}>
+            {isSubmitting ? 'Entrando...' : 'Entrar'}
+          </button>
         </form>
         <div className="login-links">
           <Link to="/reset-password">Esqueceu a senha?</Link>

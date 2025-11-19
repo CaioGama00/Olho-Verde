@@ -13,6 +13,18 @@ const AdminDashboard = ({ currentUser }) => {
   const [errorMessage, setErrorMessage] = useState('');
   const [statusLoadingMap, setStatusLoadingMap] = useState({});
   const [userActionMap, setUserActionMap] = useState({});
+  const [reportFilters, setReportFilters] = useState({
+    status: '',
+    search: '',
+    startDate: '',
+    endDate: '',
+  });
+  const [userFilters, setUserFilters] = useState({
+    status: '',
+    search: '',
+    startDate: '',
+    endDate: '',
+  });
 
   const ensureAdminOrRedirect = useCallback(() => {
     if (!currentUser) {
@@ -126,12 +138,115 @@ const AdminDashboard = ({ currentUser }) => {
     }
   };
 
+  const normalizeDate = (value) => (value ? new Date(value).setHours(0, 0, 0, 0) : null);
+
+  const isWithinDateRange = (dateValue, start, end) => {
+    if (!dateValue) return true;
+    const date = new Date(dateValue).setHours(0, 0, 0, 0);
+    if (start && date < start) return false;
+    if (end && date > end) return false;
+    return true;
+  };
+
+  const filteredReports = reports.filter((report) => {
+    const statusMatch = !reportFilters.status || report.status === reportFilters.status;
+    const searchText = reportFilters.search.trim().toLowerCase();
+    const searchMatch =
+      !searchText ||
+      (report.reporterName || '').toLowerCase().includes(searchText) ||
+      (report.reporterEmail || '').toLowerCase().includes(searchText) ||
+      (report.problem || '').toLowerCase().includes(searchText);
+
+    const start = normalizeDate(reportFilters.startDate);
+    const end = normalizeDate(reportFilters.endDate);
+    const dateMatch = isWithinDateRange(report.created_at, start, end);
+
+    return statusMatch && searchMatch && dateMatch;
+  });
+
+  const filteredUsers = users.filter((user) => {
+    const searchText = userFilters.search.trim().toLowerCase();
+    const searchMatch =
+      !searchText ||
+      (user.name || '').toLowerCase().includes(searchText) ||
+      (user.email || '').toLowerCase().includes(searchText);
+
+    const isBlocked = Boolean(user.banned_until);
+    const statusMatch =
+      userFilters.status === ''
+        ? true
+        : userFilters.status === 'blocked'
+          ? isBlocked
+          : !isBlocked;
+
+    const start = normalizeDate(userFilters.startDate);
+    const end = normalizeDate(userFilters.endDate);
+    const dateMatch = isWithinDateRange(user.created_at, start, end);
+
+    return searchMatch && statusMatch && dateMatch;
+  });
+
   const renderReportsTable = () => (
     <div className="admin-card">
       <div className="admin-card-header">
         <h3>Painel de Denúncias</h3>
         <button onClick={fetchReports} className="refresh-button">
           Atualizar
+        </button>
+      </div>
+      <div className="filters-row">
+        <div className="filter-field">
+          <label>Status</label>
+          <select
+            value={reportFilters.status}
+            onChange={(e) => setReportFilters((prev) => ({ ...prev, status: e.target.value }))}
+          >
+            <option value="">Todos</option>
+            {REPORT_STATUS_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="filter-field">
+          <label>Usuário / Email / Problema</label>
+          <input
+            type="text"
+            placeholder="Buscar texto"
+            value={reportFilters.search}
+            onChange={(e) => setReportFilters((prev) => ({ ...prev, search: e.target.value }))}
+          />
+        </div>
+        <div className="filter-field">
+          <label>Data inicial</label>
+          <input
+            type="date"
+            value={reportFilters.startDate}
+            onChange={(e) => setReportFilters((prev) => ({ ...prev, startDate: e.target.value }))}
+          />
+        </div>
+        <div className="filter-field">
+          <label>Data final</label>
+          <input
+            type="date"
+            value={reportFilters.endDate}
+            onChange={(e) => setReportFilters((prev) => ({ ...prev, endDate: e.target.value }))}
+          />
+        </div>
+        <button
+          className="clear-button"
+          type="button"
+          onClick={() =>
+            setReportFilters({
+              status: '',
+              search: '',
+              startDate: '',
+              endDate: '',
+            })
+          }
+        >
+          Limpar
         </button>
       </div>
       {loadingReports ? (
@@ -150,14 +265,14 @@ const AdminDashboard = ({ currentUser }) => {
               </tr>
             </thead>
             <tbody>
-              {reports.length === 0 ? (
+              {filteredReports.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="empty-row">
-                    Nenhuma denúncia cadastrada ainda.
+                    Nenhuma denúncia encontrada com os filtros atuais.
                   </td>
                 </tr>
               ) : (
-                reports.map((report, index) => (
+                filteredReports.map((report, index) => (
                   <tr key={report.id}>
                     <td>{index + 1}</td>
                     <td>{report.problem}</td>
@@ -165,6 +280,7 @@ const AdminDashboard = ({ currentUser }) => {
                     <td>{report.reporterEmail || '—'}</td>
                     <td>
                       <select
+                        className={`status-select status-${report.status || 'default'}`}
                         value={report.status}
                         onChange={(event) => updateReportStatus(report.id, event.target.value)}
                         disabled={Boolean(statusLoadingMap[report.id])}
@@ -200,6 +316,58 @@ const AdminDashboard = ({ currentUser }) => {
           Atualizar
         </button>
       </div>
+      <div className="filters-row">
+        <div className="filter-field">
+          <label>Status</label>
+          <select
+            value={userFilters.status}
+            onChange={(e) => setUserFilters((prev) => ({ ...prev, status: e.target.value }))}
+          >
+            <option value="">Todos</option>
+            <option value="active">Ativo</option>
+            <option value="blocked">Bloqueado</option>
+          </select>
+        </div>
+        <div className="filter-field">
+          <label>Usuário / Email</label>
+          <input
+            type="text"
+            placeholder="Buscar texto"
+            value={userFilters.search}
+            onChange={(e) => setUserFilters((prev) => ({ ...prev, search: e.target.value }))}
+          />
+        </div>
+        <div className="filter-field">
+          <label>Data inicial</label>
+          <input
+            type="date"
+            value={userFilters.startDate}
+            onChange={(e) => setUserFilters((prev) => ({ ...prev, startDate: e.target.value }))}
+          />
+        </div>
+        <div className="filter-field">
+          <label>Data final</label>
+          <input
+            type="date"
+            value={userFilters.endDate}
+            onChange={(e) => setUserFilters((prev) => ({ ...prev, endDate: e.target.value }))}
+          />
+        </div>
+        <button
+          className="clear-button"
+          type="button"
+          onClick={() =>
+            setUserFilters({
+              status: '',
+              search: '',
+              startDate: '',
+              endDate: '',
+            })
+          }
+        >
+          Limpar
+        </button>
+      </div>
       {loadingUsers ? (
         <p>Carregando usuários...</p>
       ) : (
@@ -215,14 +383,14 @@ const AdminDashboard = ({ currentUser }) => {
               </tr>
             </thead>
             <tbody>
-              {users.length === 0 ? (
+              {filteredUsers.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="empty-row">
-                    Não há usuários cadastrados.
+                    Nenhum usuário encontrado com os filtros atuais.
                   </td>
                 </tr>
               ) : (
-                users.map((user) => {
+                filteredUsers.map((user) => {
                   const isBlocked = Boolean(user.banned_until);
                   return (
                     <tr key={user.id}>

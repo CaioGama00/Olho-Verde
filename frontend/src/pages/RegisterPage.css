@@ -92,6 +92,12 @@
   background-color: var(--secondary-color);
 }
 
+.register-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.8;
+  background-color: var(--secondary-color);
+}
+
 .register-container .message {
   margin-top: 1rem;
   color: #d93025; /* Error color */

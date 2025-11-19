@@ -1,9 +1,11 @@
 import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import authService from '../services/authService';
 
 const Navbar = ({ currentUser, onLogout }) => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const isOnMap = location.pathname === '/';
 
   const handleLogout = async () => {
     if (onLogout) {
@@ -18,14 +20,16 @@ const Navbar = ({ currentUser, onLogout }) => {
 
   return (
     <nav>
-      <Link to="/">Início</Link>
+      {!isOnMap && <Link to="/">Mapa</Link>}
       {currentUser ? (
         <div>
           {currentUser.isAdmin && (
             <Link to="/admin">Painel Admin</Link>
           )}
           <Link to="/minhas-denuncias">Minhas Denúncias</Link>
-          <span>{displayName}</span>
+          <button type="button" className="user-chip" title="Perfil do usuário">
+            {displayName}
+          </button>
           <button onClick={handleLogout}>Sair</button>
         </div>
       ) : (
