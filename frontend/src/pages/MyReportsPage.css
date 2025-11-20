@@ -32,6 +32,57 @@
   font-size: 1.8rem;
 }
 
+.my-reports-filters {
+  margin-bottom: 1rem;
+}
+
+.filters-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: flex-end;
+  margin-bottom: 0.75rem;
+}
+
+.filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 140px;
+  flex: 1;
+}
+
+.filter-field label {
+  font-size: 0.85rem;
+  color: #4a4f55;
+  font-weight: 600;
+}
+
+.filter-field input,
+.filter-field select {
+  padding: 0.45rem 0.55rem;
+  border-radius: 6px;
+  border: 1px solid #ced4da;
+  font-size: 0.9rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.clear-button {
+  border: 1px solid #ced4da;
+  background: #fff;
+  color: #2f3338;
+  padding: 0.45rem 0.9rem;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.clear-button:hover {
+  background: #f1f3f5;
+}
+
 .my-reports-grid {
   display: grid;
   grid-template-columns: 1fr;

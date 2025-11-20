@@ -26,6 +26,40 @@ const AdminDashboard = ({ currentUser }) => {
     endDate: '',
   });
 
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'ascending' });
+
+  const requestSort = (key) => {
+    let direction = 'ascending';
+    if (sortConfig.key === key && sortConfig.direction === 'ascending') {
+      direction = 'descending';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const sortData = (data, config) => {
+    if (!config.key) return data;
+    return [...data].sort((a, b) => {
+      let valA = a[config.key];
+      let valB = b[config.key];
+
+      // Handle null/undefined
+      if (valA == null) valA = '';
+      if (valB == null) valB = '';
+
+      // Case insensitive string comparison
+      if (typeof valA === 'string') valA = valA.toLowerCase();
+      if (typeof valB === 'string') valB = valB.toLowerCase();
+
+      if (valA < valB) {
+        return config.direction === 'ascending' ? -1 : 1;
+      }
+      if (valA > valB) {
+        return config.direction === 'ascending' ? 1 : -1;
+      }
+      return 0;
+    });
+  };
+
   const ensureAdminOrRedirect = useCallback(() => {
     if (!currentUser) {
       navigate('/login');
@@ -164,6 +198,8 @@ const AdminDashboard = ({ currentUser }) => {
     return statusMatch && searchMatch && dateMatch;
   });
 
+  const sortedReports = sortData(filteredReports, sortConfig);
+
   const filteredUsers = users.filter((user) => {
     const searchText = userFilters.search.trim().toLowerCase();
     const searchMatch =
@@ -185,6 +221,13 @@ const AdminDashboard = ({ currentUser }) => {
 
     return searchMatch && statusMatch && dateMatch;
   });
+
+  const sortedUsers = sortData(filteredUsers, sortConfig);
+
+  const getSortIndicator = (key) => {
+    if (sortConfig.key !== key) return null;
+    return sortConfig.direction === 'ascending' ? ' ▲' : ' ▼';
+  };
 
   const renderReportsTable = () => (
     <div className="admin-card">
@@ -256,25 +299,37 @@ const AdminDashboard = ({ currentUser }) => {
           <table>
             <thead>
               <tr>
-                <th>#</th>
-                <th>Problema</th>
-                <th>Usuário</th>
-                <th>Email</th>
-                <th>Status</th>
-                <th>Criada em</th>
+                <th onClick={() => requestSort('id')} className="sortable-header">
+                  # {getSortIndicator('id')}
+                </th>
+                <th onClick={() => requestSort('problem')} className="sortable-header">
+                  Problema {getSortIndicator('problem')}
+                </th>
+                <th onClick={() => requestSort('reporterName')} className="sortable-header">
+                  Usuário {getSortIndicator('reporterName')}
+                </th>
+                <th onClick={() => requestSort('reporterEmail')} className="sortable-header">
+                  Email {getSortIndicator('reporterEmail')}
+                </th>
+                <th onClick={() => requestSort('status')} className="sortable-header">
+                  Status {getSortIndicator('status')}
+                </th>
+                <th onClick={() => requestSort('created_at')} className="sortable-header">
+                  Criada em {getSortIndicator('created_at')}
+                </th>
               </tr>
             </thead>
             <tbody>
-              {filteredReports.length === 0 ? (
+              {sortedReports.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="empty-row">
                     Nenhuma denúncia encontrada com os filtros atuais.
                   </td>
                 </tr>
               ) : (
-                filteredReports.map((report, index) => (
+                sortedReports.map((report, index) => (
                   <tr key={report.id}>
-                    <td>{index + 1}</td>
+                    <td>{report.id}</td>
                     <td>{report.problem}</td>
                     <td>{report.reporterName || '—'}</td>
                     <td>{report.reporterEmail || '—'}</td>
@@ -375,22 +430,30 @@ const AdminDashboard = ({ currentUser }) => {
           <table>
             <thead>
               <tr>
-                <th>Nome</th>
-                <th>Email</th>
-                <th>Status</th>
-                <th>Último acesso</th>
+                <th onClick={() => requestSort('name')} className="sortable-header">
+                  Nome {getSortIndicator('name')}
+                </th>
+                <th onClick={() => requestSort('email')} className="sortable-header">
+                  Email {getSortIndicator('email')}
+                </th>
+                <th onClick={() => requestSort('banned_until')} className="sortable-header">
+                  Status {getSortIndicator('banned_until')}
+                </th>
+                <th onClick={() => requestSort('last_sign_in_at')} className="sortable-header">
+                  Último acesso {getSortIndicator('last_sign_in_at')}
+                </th>
                 <th>Ações</th>
               </tr>
             </thead>
             <tbody>
-              {filteredUsers.length === 0 ? (
+              {sortedUsers.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="empty-row">
                     Nenhum usuário encontrado com os filtros atuais.
                   </td>
                 </tr>
               ) : (
-                filteredUsers.map((user) => {
+                sortedUsers.map((user) => {
                   const isBlocked = Boolean(user.banned_until);
                   return (
                     <tr key={user.id}>
@@ -404,9 +467,9 @@ const AdminDashboard = ({ currentUser }) => {
                       <td>
                         {user.last_sign_in_at
                           ? new Date(user.last_sign_in_at).toLocaleString('pt-BR', {
-                              dateStyle: 'short',
-                              timeStyle: 'short',
-                            })
+                            dateStyle: 'short',
+                            timeStyle: 'short',
+                          })
                           : '—'}
                       </td>
                       <td className="actions-cell">

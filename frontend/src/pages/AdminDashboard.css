@@ -170,6 +170,16 @@ th {
   color: #1d1d1d;
 }
 
+.sortable-header {
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.2s ease;
+}
+
+.sortable-header:hover {
+  background-color: #e9ecef;
+}
+
 tbody tr:hover {
   background-color: #f1f3f5;
   color: #111;

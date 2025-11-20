@@ -176,16 +176,34 @@ function ReportMarker({ report }) {
 }
 
 
-function LocationMarker({ currentUser, mapInstance, selectedReportId, reports, refreshReports }) {
+function LocationMarker({
+  currentUser,
+  mapInstance,
+  selectedReportId,
+  reports,
+  refreshReports,
+  initialUserLocation,
+}) {
   const [newMarker, setNewMarker] = useState(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const newMarkerRef = useRef(null);
-  const [userLocation, setUserLocation] = useState(null);
+  const [userLocation, setUserLocation] = useState(initialUserLocation || null);
   const [locationError, setLocationError] = useState('');
   const allowedRadiusMeters = 800;
 
   useEffect(() => {
+    if (!initialUserLocation) return;
+    setUserLocation((prev) => {
+      if (prev && prev.lat === initialUserLocation.lat && prev.lng === initialUserLocation.lng) {
+        return prev;
+      }
+      return initialUserLocation;
+    });
+  }, [initialUserLocation]);
+
+  useEffect(() => {
     if (!currentUser) return;
+    if (userLocation) return;
     if (!navigator.geolocation) {
       setLocationError('Seu navegador não permite obter localização.');
       return;
@@ -201,7 +219,7 @@ function LocationMarker({ currentUser, mapInstance, selectedReportId, reports, r
       () => setLocationError('Não foi possível obter sua localização.'),
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 }
     );
-  }, [currentUser]);
+  }, [currentUser, userLocation]);
 
   useMapEvents({
     click(e) {
@@ -324,7 +342,7 @@ function LocationMarker({ currentUser, mapInstance, selectedReportId, reports, r
   );
 }
 
-const initialMapPosition = [-23.55052, -46.633308];
+const FALLBACK_MAP_POSITION = [-23.55052, -46.633308];
 
 const ProtectedRoute = ({ currentUser, children, adminOnly = false }) => {
   if (!currentUser) {
@@ -339,6 +357,9 @@ const ProtectedRoute = ({ currentUser, children, adminOnly = false }) => {
 function App() {
   const [currentUser, setCurrentUser] = useState(() => authService.getCurrentUser());
   const [mapInstance, setMapInstance] = useState(null);
+  const [mapCenter, setMapCenter] = useState(FALLBACK_MAP_POSITION);
+  const [userLocation, setUserLocation] = useState(null);
+  const [hasUserLocation, setHasUserLocation] = useState(false);
   const [reports, setReports] = useState([]);
   const location = useLocation();
   const navigate = useNavigate();
@@ -356,6 +377,36 @@ function App() {
   useEffect(() => {
     fetchReports();
   }, [currentUser]);
+
+  useEffect(() => {
+    if (!navigator.geolocation) {
+      console.warn('Geolocalização não suportada pelo navegador.');
+      return;
+    }
+
+    let cancelled = false;
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        if (cancelled) return;
+        const coords = {
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+        };
+        setUserLocation(coords);
+        setMapCenter([coords.lat, coords.lng]);
+        setHasUserLocation(true);
+      },
+      (error) => {
+        console.warn('Não foi possível obter sua localização inicial:', error);
+      },
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 300000 }
+    );
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (!location.hash || location.pathname === '/reset-password') {
@@ -395,6 +446,16 @@ function App() {
     }
   }, [mapInstance, isAuthenticated]);
 
+  useEffect(() => {
+    if (!mapInstance || !hasUserLocation || !userLocation) return;
+
+    const zoom = Math.max(mapInstance.getZoom(), 13);
+    mapInstance.flyTo([userLocation.lat, userLocation.lng], zoom, {
+      animate: true,
+      duration: 0.75,
+    });
+  }, [mapInstance, userLocation, hasUserLocation]);
+
   const handleLogout = async () => {
     await authService.logout();
     setCurrentUser(null);
@@ -414,11 +475,7 @@ function App() {
     <div className="app-container">
       <header className="app-header">
         <div className="app-logo-container">
-          {isAuthenticated && location.pathname !== '/' && (
-            <button type="button" className="home-chip" onClick={() => navigate('/')}>
-              <span className="icon">←</span> Mapa
-            </button>
-          )}
+
           <button type="button" className="logo-button" onClick={() => navigate('/')}>
             <div className="logo-icon-wrapper">
               <FaRecycle className="app-logo" />
@@ -431,7 +488,7 @@ function App() {
 
       <div className="map-shell">
         <MapContainer
-          center={initialMapPosition}
+          center={mapCenter}
           zoom={13}
           scrollWheelZoom={true}
           doubleClickZoom={true}
@@ -452,6 +509,7 @@ function App() {
                 selectedReportId={selectedReportId}
                 reports={reports}
                 refreshReports={fetchReports}
+                initialUserLocation={userLocation}
               />
             ) : (
               <LandingPage />
