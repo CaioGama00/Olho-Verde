@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { FaThumbsUp, FaThumbsDown, FaTimes, FaMapMarkerAlt, FaWater, FaTrashAlt, FaTree, FaRoad } from 'react-icons/fa';
+import { FaThumbsUp, FaThumbsDown, FaTimes, FaMapMarkerAlt, FaWater, FaTrashAlt, FaTree, FaRoad, FaImage } from 'react-icons/fa';
 import { CgMoreVertical } from "react-icons/cg";
 import reportService from '../services/reportService';
 import { getStatusLabel } from '../utils/reportStatus';
@@ -22,27 +22,11 @@ const problemIcons = {
     'Buraco na via': <FaRoad />,
 };
 
-const getStoredComments = (reportId) => {
-    try {
-        const raw = localStorage.getItem(`report-comments-${reportId}`);
-        return raw ? JSON.parse(raw) : [];
-    } catch {
-        return [];
-    }
-};
-
-const saveComments = (reportId, comments) => {
-    try {
-        localStorage.setItem(`report-comments-${reportId}`, JSON.stringify(comments));
-    } catch {
-        // ignore
-    }
-};
-
 const ReportDetailsOverlay = ({ report, currentUser, onClose }) => {
     const [address, setAddress] = useState('Carregando endereço...');
     const [comments, setComments] = useState([]);
     const [newComment, setNewComment] = useState('');
+    const [detailedReport, setDetailedReport] = useState(null);
 
     // Local state for immediate UI updates (Optimistic UI)
     const [localUpvotes, setLocalUpvotes] = useState(0);
@@ -57,40 +41,67 @@ const ReportDetailsOverlay = ({ report, currentUser, onClose }) => {
     });
 
     useEffect(() => {
-        if (report) {
-            setLocalUpvotes(report.upvotes || 0);
-            setLocalDownvotes(report.downvotes || 0);
-            setCurrentUserVote(report.user_vote || null);
-            setComments(getStoredComments(report.id));
+        if (!report) return;
 
-            initialVoteState.current = {
-                vote: report.user_vote || null,
-                upvotes: report.upvotes || 0,
-                downvotes: report.downvotes || 0,
-            };
+        setDetailedReport(null);
+        setLocalUpvotes(report.upvotes || 0);
+        setLocalDownvotes(report.downvotes || 0);
+        setCurrentUserVote(report.user_vote || null);
 
-            // Fetch address
-            if (report.position) {
-                const { lat, lng } = report.position;
-                fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`, {
-                    headers: { 'Accept-Language': 'pt-BR', 'User-Agent': 'Olho-Verde' },
+        initialVoteState.current = {
+            vote: report.user_vote || null,
+            upvotes: report.upvotes || 0,
+            downvotes: report.downvotes || 0,
+        };
+
+        // Fetch address
+        if (report.position) {
+            const { lat, lng } = report.position;
+            fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`, {
+                headers: { 'Accept-Language': 'pt-BR', 'User-Agent': 'Olho-Verde' },
+            })
+                .then((res) => res.json())
+                .then((data) => {
+                    const label =
+                        data?.address?.road ||
+                        data?.address?.pedestrian ||
+                        data?.address?.suburb ||
+                        data?.display_name ||
+                        'Endereço não encontrado';
+                    setAddress(label);
                 })
-                    .then((res) => res.json())
-                    .then((data) => {
-                        const label =
-                            data?.address?.road ||
-                            data?.address?.pedestrian ||
-                            data?.address?.suburb ||
-                            data?.display_name ||
-                            'Endereço não encontrado';
-                        setAddress(label);
-                    })
-                    .catch(() => setAddress('Endereço indisponível'));
-            }
+                .catch(() => setAddress('Endereço indisponível'));
         }
+
+        let cancelled = false;
+
+        reportService.getReportDetails(report.id)
+            .then((response) => {
+                const payload = response?.data || {};
+                if (cancelled) return;
+                setDetailedReport(payload);
+                setComments(payload.comments || []);
+                setLocalUpvotes(payload.upvotes || 0);
+                setLocalDownvotes(payload.downvotes || 0);
+                setCurrentUserVote(payload.user_vote || null);
+                initialVoteState.current = {
+                    vote: payload.user_vote || null,
+                    upvotes: payload.upvotes || 0,
+                    downvotes: payload.downvotes || 0,
+                };
+            })
+            .catch((error) => {
+                console.error('Erro ao buscar detalhes do report:', error);
+            });
+
+        return () => {
+            cancelled = true;
+        };
     }, [report]);
 
     if (!report) return null;
+
+    const activeReport = detailedReport || report;
 
     const handleLocalVote = (voteType) => {
         if (!currentUser || isVoting) return;
@@ -153,21 +164,39 @@ const ReportDetailsOverlay = ({ report, currentUser, onClose }) => {
 
     const handleAddComment = () => {
         if (!currentUser || !newComment.trim()) return;
-        const entry = {
-            id: Date.now(),
-            author: currentUser?.user?.user_metadata?.name || currentUser?.email || 'Você',
-            text: newComment.trim(),
-            createdAt: new Date().toISOString(),
+        const content = newComment.trim();
+        const authorName = currentUser?.user?.user_metadata?.name || currentUser?.user?.email || currentUser?.email || 'Você';
+        const authorEmail = currentUser?.user?.email || currentUser?.email || null;
+        const optimistic = {
+            id: `temp-${Date.now()}`,
+            author_name: authorName,
+            author_email: authorEmail,
+            content,
+            created_at: new Date().toISOString(),
+            pending: true,
         };
-        const updated = [entry, ...comments].slice(0, 30);
-        setComments(updated);
-        saveComments(report.id, updated);
+        setComments((prev) => [optimistic, ...prev]);
         setNewComment('');
+
+        reportService.addComment(report.id, content)
+            .then((response) => {
+                const saved = response?.data;
+                setComments((prev) => {
+                    const filtered = prev.filter((c) => !c.pending);
+                    return [saved, ...filtered];
+                });
+            })
+            .catch((error) => {
+                console.error('Erro ao salvar comentário:', error);
+                alert('Não foi possível salvar o comentário.');
+                setComments((prev) => prev.filter((c) => !c.pending));
+                setNewComment(content);
+            });
     };
 
-    const statusLabel = getStatusLabel(report.status);
-    const problemColor = BASE_COLORS[report.problem] || BASE_COLORS.default;
-    const ProblemIcon = problemIcons[report.problem] || <FaMapMarkerAlt />;
+    const statusLabel = getStatusLabel(activeReport.status);
+    const problemColor = BASE_COLORS[activeReport.problem] || BASE_COLORS.default;
+    const ProblemIcon = problemIcons[activeReport.problem] || <FaMapMarkerAlt />;
 
     return (
         <div className="report-overlay-container">
@@ -182,28 +211,41 @@ const ReportDetailsOverlay = ({ report, currentUser, onClose }) => {
                         {ProblemIcon}
                     </div>
                     <div className="report-title-section">
-                        <span className="report-id">Denúncia #{report.id}</span>
-                        <h2>{report.problem}</h2>
-                        <span className={`status-badge status-${report.status || 'nova'}`}>
+                        <span className="report-id">Denúncia #{activeReport.id}</span>
+                        <h2>{activeReport.problem}</h2>
+                        <span className={`status-badge status-${activeReport.status || 'nova'}`}>
                             {statusLabel}
                         </span>
                     </div>
                 </div>
 
                 <div className="report-body">
+                    {activeReport.image_url && (
+                        <div className="evidence-card">
+                            <img src={activeReport.image_url} alt="Evidência da denúncia" />
+                        </div>
+                    )}
+
+                    <div className="info-section description-block">
+                        <span className="label description-label">Descrição</span>
+                        <p className="value description-text">
+                            {activeReport.description || 'Sem descrição fornecida.'}
+                        </p>
+                    </div>
+
                     <div className="info-section">
                         <div className="info-row">
                             <span className="label">Localização</span>
                             <p className="value">{address}</p>
                             <small className="coords">
-                                {report.position?.lat?.toFixed(5)}, {report.position?.lng?.toFixed(5)}
+                                {activeReport.position?.lat?.toFixed(5)}, {activeReport.position?.lng?.toFixed(5)}
                             </small>
                         </div>
 
                         <div className="info-row">
                             <span className="label">Data</span>
                             <p className="value">
-                                {new Date(report.created_at).toLocaleDateString('pt-BR', {
+                                {new Date(activeReport.created_at).toLocaleDateString('pt-BR', {
                                     day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
                                 })}
                             </p>
@@ -260,12 +302,12 @@ const ReportDetailsOverlay = ({ report, currentUser, onClose }) => {
                                 comments.map(c => (
                                     <div key={c.id} className="comment-card">
                                         <div className="comment-header">
-                                            <span className="author">{c.author}</span>
+                                            <span className="author">{c.author_name || 'Usuário'}</span>
                                             <span className="date">
-                                                {new Date(c.createdAt).toLocaleDateString('pt-BR')}
+                                                {new Date(c.created_at || c.createdAt).toLocaleDateString('pt-BR')}
                                             </span>
                                         </div>
-                                        <p>{c.text}</p>
+                                        <p>{c.content || c.text}</p>
                                     </div>
                                 ))
                             )}

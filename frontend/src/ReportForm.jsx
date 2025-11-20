@@ -13,6 +13,7 @@ function ReportForm({ position, onClose, onSubmit, problemCategories }) {
   const [selectedFile, setSelectedFile] = useState(null);
   const [selectedCategoryId, setSelectedCategoryId] = useState(problemCategories[0]?.id || '');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [description, setDescription] = useState('');
 
   useEffect(() => {
     if (modalRef.current) {
@@ -31,6 +32,11 @@ function ReportForm({ position, onClose, onSubmit, problemCategories }) {
 
     if (!selectedFile) {
       alert('Por favor, selecione uma imagem.');
+      return;
+    }
+
+    if (!description.trim()) {
+      alert('Descreva rapidamente o problema para que outros entendam.');
       return;
     }
 
@@ -63,7 +69,11 @@ function ReportForm({ position, onClose, onSubmit, problemCategories }) {
         const confirmedCategory = problemCategories.find(
           (category) => category.id === result.detectedCategoryId
         ) || selectedCategory;
-        await onSubmit(confirmedCategory?.label || selectedCategory?.label || '');
+        await onSubmit({
+          problem: confirmedCategory?.label || selectedCategory?.label || '',
+          description: description.trim(),
+          file: selectedFile,
+        });
       } else {
         alert(result.error || selectedCategory?.failureMessage || 'A imagem não corresponde ao problema selecionado.');
       }
@@ -113,6 +123,17 @@ function ReportForm({ position, onClose, onSubmit, problemCategories }) {
               )}
             </div>
           </div>
+
+          <label htmlFor="description">Descrição</label>
+          <textarea
+            id="description"
+            name="description"
+            placeholder="Conte o que está acontecendo, há quanto tempo e o impacto para a vizinhança."
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            rows={3}
+            maxLength={500}
+          />
 
           <div className="modal-actions">
             <button type="button" onClick={onClose} className="modal-button cancel">Cancelar</button>

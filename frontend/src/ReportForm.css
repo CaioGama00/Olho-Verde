@@ -161,6 +161,30 @@
   word-break: break-all;
 }
 
+textarea {
+  width: 100%;
+  border: 1px solid #d9dde3;
+  border-radius: 10px;
+  padding: 0.85rem;
+  font-family: inherit;
+  font-size: 1rem;
+  resize: vertical;
+  min-height: 96px;
+  background: #f9fafb;
+  color: #1c2a39;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+textarea:focus {
+  outline: none;
+  border-color: #2ecc71;
+  box-shadow: 0 0 0 3px rgba(46, 204, 113, 0.18);
+}
+
+textarea::placeholder {
+  color: #728096;
+}
+
 /* Actions */
 .modal-actions {
   display: flex;

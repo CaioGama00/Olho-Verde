@@ -4,14 +4,18 @@ const cors = require('cors');
 const supabase = require('./db');
 const multer = require('multer');
 const axios = require('axios');
+const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 3001;
 const HUGGINGFACE_API_KEY = process.env.HUGGINGFACE_API_KEY;
 const HUGGINGFACE_MODEL = (process.env.HUGGINGFACE_MODEL || 'microsoft/resnet-50').trim();
 const HUGGINGFACE_INFERENCE_URL = (process.env.HUGGINGFACE_INFERENCE_URL || `https://api-inference.huggingface.co/models/${HUGGINGFACE_MODEL}`).trim();
-const IMAGE_CLASSIFICATION_ENABLED = Boolean(HUGGINGFACE_API_KEY);
+const IMAGE_CLASSIFICATION_BYPASS = process.env.IMAGE_CLASSIFICATION_BYPASS === 'true';
+const IMAGE_CLASSIFICATION_ENABLED = IMAGE_CLASSIFICATION_BYPASS || Boolean(HUGGINGFACE_API_KEY);
 if (!IMAGE_CLASSIFICATION_ENABLED) {
   console.warn('HUGGINGFACE_API_KEY não definido. /api/classify-image ficará desabilitado.');
+} else if (IMAGE_CLASSIFICATION_BYPASS) {
+  console.warn('IMAGE_CLASSIFICATION_BYPASS=true: classificação será sempre aprovada.');
 }
 
 const normalizeBaseUrl = (input, fallback) => {
@@ -88,10 +92,39 @@ const REPORT_CATEGORIES = [
 
 const CATEGORY_DEFAULT_THRESHOLD = Number(process.env.CATEGORY_SCORE_THRESHOLD) || 0.1;
 
+const SUPABASE_STORAGE_BUCKET = process.env.SUPABASE_STORAGE_BUCKET || 'report-images';
+
 const upload = multer({ storage: multer.memoryStorage() });
 
 app.use(cors());
 app.use(express.json());
+
+const uploadImageToStorage = async (file, userId) => {
+  if (!file) return null;
+  const ext = path.extname(file.originalname || '').toLowerCase() || '.jpg';
+  const safeName = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  const filePath = `${userId || 'anon'}/${safeName}${ext}`;
+
+  const { data, error } = await supabase.storage
+    .from(SUPABASE_STORAGE_BUCKET)
+    .upload(filePath, file.buffer, {
+      contentType: file.mimetype || 'application/octet-stream',
+      upsert: false,
+    });
+
+  if (error) {
+    throw error;
+  }
+
+  const { data: publicData } = supabase.storage
+    .from(SUPABASE_STORAGE_BUCKET)
+    .getPublicUrl(data.path);
+
+  return {
+    fileId: data.path,
+    publicUrl: publicData?.publicUrl || null,
+  };
+};
 
 const hasAdminFlag = (metadata = {}) => {
   const role = typeof metadata.role === 'string' ? metadata.role.toLowerCase() : null;
@@ -191,6 +224,9 @@ const buildReportResponse = (report, { includeReporterContact = false } = {}) =>
   const response = {
     ...report,
     status: report.status || DEFAULT_REPORT_STATUS,
+    description: report.description || '',
+    image_url: report.image_url || null,
+    image_drive_id: report.image_drive_id || null,
     position: {
       lat: parseFloat(report.lat),
       lng: parseFloat(report.lng)
@@ -248,16 +284,165 @@ app.get('/api/reports', async (req, res) => {
   }
 });
 
-// POST /api/reports - Create a new report (protected)
-app.post('/api/reports', authenticateToken, async (req, res) => {
-  const { problem, position } = req.body;
-  const { lat, lng } = position;
+const fetchCommentsForReport = async (reportId) => {
+  const { data, error } = await supabase
+    .from('report_comments')
+    .select('id, content, created_at, user_id, users(name, email)')
+    .eq('report_id', reportId)
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+
+  return (data || []).map((comment) => ({
+    id: comment.id,
+    content: comment.content,
+    created_at: comment.created_at,
+    user_id: comment.user_id,
+    author_name: comment.users?.name || comment.users?.email || 'Usuário',
+    author_email: comment.users?.email || null,
+  }));
+};
+
+// GET /api/reports/:id - Report details + comments + user vote
+app.get('/api/reports/:id', async (req, res) => {
+  const reportId = parseInt(req.params.id, 10);
+  if (Number.isNaN(reportId)) {
+    return res.status(400).json({ error: 'ID inválido.' });
+  }
+
+  try {
+    const currentUser = await getUserFromRequest(req);
+    const currentUserId = currentUser?.id || null;
+
+    const { data: report, error } = await supabase
+      .from('reports')
+      .select('*')
+      .eq('id', reportId)
+      .single();
+
+    if (error) throw error;
+    if (!report) return res.status(404).json({ error: 'Report não encontrado' });
+
+    let userVote = null;
+    if (currentUserId) {
+      const { data: vote } = await supabase
+        .from('user_votes')
+        .select('vote_value')
+        .eq('user_id', currentUserId)
+        .eq('report_id', reportId)
+        .maybeSingle();
+      if (vote) {
+        userVote = vote.vote_value === 1 ? 'up' : vote.vote_value === -1 ? 'down' : null;
+      }
+    }
+
+    const comments = await fetchCommentsForReport(reportId);
+    const response = buildReportResponse(report);
+    response.user_vote = userVote;
+    response.comments = comments;
+
+    res.json(response);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /api/reports/:id/comments - list comments
+app.get('/api/reports/:id/comments', async (req, res) => {
+  const reportId = parseInt(req.params.id, 10);
+  if (Number.isNaN(reportId)) {
+    return res.status(400).json({ error: 'ID inválido.' });
+  }
+
+  try {
+    const comments = await fetchCommentsForReport(reportId);
+    res.json({ comments });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST /api/reports/:id/comments - add new comment
+app.post('/api/reports/:id/comments', authenticateToken, async (req, res) => {
+  const reportId = parseInt(req.params.id, 10);
+  if (Number.isNaN(reportId)) {
+    return res.status(400).json({ error: 'ID inválido.' });
+  }
+  const content = (req.body?.content || '').trim();
+  if (!content) {
+    return res.status(400).json({ error: 'Comentário é obrigatório.' });
+  }
+
   const { id: user_id } = req.user;
+  const { name, email } = extractUserProfile(req.user);
 
   try {
     const { data, error } = await supabase
+      .from('report_comments')
+      .insert([{ content, report_id: reportId, user_id }])
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    res.status(201).json({
+      id: data.id,
+      content: data.content,
+      created_at: data.created_at,
+      user_id,
+      author_name: name || email || 'Você',
+      author_email: email || null,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST /api/reports - Create a new report (protected)
+app.post('/api/reports', authenticateToken, upload.single('image'), async (req, res) => {
+  const body = req.body || {};
+  const { problem, description = '' } = body;
+  const lat = body.lat ?? body.position?.lat;
+  const lng = body.lng ?? body.position?.lng;
+  const { id: user_id } = req.user;
+
+  if (!problem || lat === undefined || lng === undefined) {
+    return res.status(400).json({ error: 'Problema, latitude e longitude são obrigatórios.' });
+  }
+
+  const latNum = parseFloat(lat);
+  const lngNum = parseFloat(lng);
+  if (Number.isNaN(latNum) || Number.isNaN(lngNum)) {
+    return res.status(400).json({ error: 'Latitude/Longitude inválidas.' });
+  }
+
+  let imageData = null;
+
+  try {
+    if (req.file) {
+      imageData = await uploadImageToStorage(req.file, user_id);
+    }
+
+    const payload = {
+      problem,
+      lat: latNum,
+      lng: lngNum,
+      user_id,
+      description,
+      status: DEFAULT_REPORT_STATUS,
+    };
+
+    if (imageData) {
+      payload.image_url = imageData.publicUrl;
+      payload.image_drive_id = imageData.fileId; // storing path for reference
+    }
+
+    const { data, error } = await supabase
       .from('reports')
-      .insert([{ problem, lat, lng, user_id, status: DEFAULT_REPORT_STATUS }])
+      .insert([payload])
       .select();
 
     if (error) throw error;
@@ -269,7 +454,8 @@ app.post('/api/reports', authenticateToken, async (req, res) => {
     res.status(201).json(newReport);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Internal server error' });
+    const message = err?.message || 'Internal server error';
+    res.status(500).json({ error: 'Internal server error', details: message });
   }
 });
 
@@ -507,7 +693,7 @@ app.post('/api/auth/password-reset/confirm', async (req, res) => {
 });
 
 const classifyImageBuffer = async (file, expectedCategoryId = null) => {
-  if (!IMAGE_CLASSIFICATION_ENABLED) {
+  if (!IMAGE_CLASSIFICATION_ENABLED || IMAGE_CLASSIFICATION_BYPASS) {
     const disabledError = new Error('IMAGE_CLASSIFICATION_DISABLED');
     disabledError.status = 503;
     throw disabledError;
@@ -558,6 +744,18 @@ const classifyImageBuffer = async (file, expectedCategoryId = null) => {
 app.post('/api/classify-image', upload.single('image'), async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: 'Nenhuma imagem foi enviada.' });
+  }
+
+  if (IMAGE_CLASSIFICATION_BYPASS) {
+    const expectedCategoryId = req.body.expectedCategoryId;
+    const expectedCategory = REPORT_CATEGORIES.find((cat) => cat.id === expectedCategoryId);
+    return res.json({
+      success: true,
+      detectedCategoryId: expectedCategoryId || null,
+      detectedCategoryLabel: expectedCategory?.label || null,
+      confidence: 1,
+      bypass: true,
+    });
   }
 
   if (!IMAGE_CLASSIFICATION_ENABLED) {

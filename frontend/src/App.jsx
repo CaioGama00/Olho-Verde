@@ -270,13 +270,16 @@ function LocationMarker({
     setIsFormOpen(false);
   };
 
-  const handleFormSubmit = async (problemType) => {
-    if (!newMarker || !currentUser) return;
+  const handleFormSubmit = async ({ problem, description, file }) => {
+    if (!newMarker || !currentUser) {
+      console.warn('User not authenticated or no marker set. Cannot submit report.');
+      return;
+    }
 
     const { lat, lng } = newMarker.position;
 
     try {
-      await reportService.createReport({ problem: problemType, position: { lat, lng } });
+      await reportService.createReport({ problem, description, lat, lng, image: file });
       setNewMarker(null);
       handleFormClose();
       refreshReports();
@@ -294,9 +297,9 @@ function LocationMarker({
               <h4>Sua localização aproximada</h4>
               <p>Ajuste a denúncia em um raio de até 800m deste ponto.</p>
             </div>
-          </Popup>
-        </Marker>
-      )}
+      </Popup>
+    </Marker>
+  )}
       <MarkerClusterGroup>
         {reports.map(report => (
           <ReportMarker
@@ -422,9 +425,6 @@ function App() {
     }
   }, [location, navigate]);
 
-  // Removed redundant useEffect for setting currentUser from localStorage
-  // since we now initialize state lazily.
-
   const overlayRoutes = ['/login', '/register', '/admin', '/reset-password', '/minhas-denuncias', '/perfil'];
   const isAuthenticated = Boolean(currentUser);
 
@@ -461,9 +461,34 @@ function App() {
     setCurrentUser(null);
   };
 
+  const visibleReports = reports.filter((r) => (r.status || '').toLowerCase() !== 'resolvida');
+
   const selectedReport = selectedReportId
-    ? reports.find(r => String(r.id) === String(selectedReportId))
+    ? visibleReports.find(r => String(r.id) === String(selectedReportId))
     : null;
+
+  const showLanding = location.pathname === '/' && !currentUser;
+
+  useEffect(() => {
+    if (!mapInstance) return;
+    if (showLanding) {
+      mapInstance.scrollWheelZoom.disable();
+      mapInstance.doubleClickZoom.disable();
+      mapInstance.dragging.disable();
+      mapInstance.keyboard.disable();
+      mapInstance.touchZoom.disable();
+      mapInstance.boxZoom.disable();
+      if (mapInstance.tap) mapInstance.tap.disable();
+    } else {
+      mapInstance.scrollWheelZoom.enable();
+      mapInstance.doubleClickZoom.enable();
+      mapInstance.dragging.enable();
+      mapInstance.keyboard.enable();
+      mapInstance.touchZoom.enable();
+      mapInstance.boxZoom.enable();
+      if (mapInstance.tap) mapInstance.tap.enable();
+    }
+  }, [mapInstance, showLanding]);
 
   const closeReportOverlay = () => {
     const params = new URLSearchParams(location.search);
@@ -488,14 +513,25 @@ function App() {
 
       <div className="map-shell">
         <MapContainer
+          key={showLanding ? 'landing-map' : 'live-map'}
           center={mapCenter}
           zoom={13}
-          scrollWheelZoom={true}
-          doubleClickZoom={true}
-          dragging={true}
-          zoomControl={true}
+          scrollWheelZoom={!showLanding}
+          doubleClickZoom={!showLanding}
+          dragging={!showLanding}
+          zoomControl={!showLanding}
+          keyboard={!showLanding}
+          className={showLanding ? 'map-locked' : ''}
           whenCreated={setMapInstance}
-          style={{ height: '100%', width: '100%', position: 'absolute', top: 0, left: 0, zIndex: 0 }}
+          style={{
+            height: '100%',
+            width: '100%',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            zIndex: 0,
+            pointerEvents: showLanding ? 'none' : 'auto',
+          }}
         >
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -507,7 +543,7 @@ function App() {
                 currentUser={currentUser}
                 mapInstance={mapInstance}
                 selectedReportId={selectedReportId}
-                reports={reports}
+                reports={visibleReports}
                 refreshReports={fetchReports}
                 initialUserLocation={userLocation}
               />

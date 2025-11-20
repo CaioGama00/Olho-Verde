@@ -110,6 +110,10 @@ body {
   min-height: 0;
 }
 
+.map-locked {
+  pointer-events: none !important;
+}
+
 /* Navbar styles */
 nav {
   display: flex;

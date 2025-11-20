@@ -155,6 +155,15 @@ const MyReportsPage = ({ currentUser }) => {
     return timeB - timeA;
   });
 
+  const handleOpenReport = (report) => {
+    const status = (report.status || '').toLowerCase();
+    if (status === 'resolvida') {
+      alert('Esta denúncia já foi marcada como resolvida.');
+      return;
+    }
+    navigate(`/?reportId=${report.id}`);
+  };
+
   if (!currentUser) {
     return (
       <div className="my-reports-page">
@@ -260,12 +269,12 @@ const MyReportsPage = ({ currentUser }) => {
             <div
               key={report.id}
               className="report-card"
-              onClick={() => navigate(`/?reportId=${report.id}`)}
+              onClick={() => handleOpenReport(report)}
               role="button"
               tabIndex={0}
               onKeyPress={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
-                  navigate(`/?reportId=${report.id}`);
+                  handleOpenReport(report);
                 }
               }}
             >

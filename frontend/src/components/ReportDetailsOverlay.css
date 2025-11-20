@@ -159,6 +159,42 @@
     padding: 2rem;
 }
 
+.evidence-card {
+    border-radius: 14px;
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+}
+
+.evidence-card img {
+    width: 100%;
+    display: block;
+    max-height: 320px;
+    object-fit: cover;
+}
+
+.description-block {
+    margin-bottom: 1.25rem;
+}
+
+.description-label {
+    display: block;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 800;
+    color: #0f2f4a;
+    margin-bottom: 0.35rem;
+}
+
+.description-text {
+    font-size: 1rem;
+    line-height: 1.6;
+    color: #2f3d4a;
+    margin: 0;
+}
+
 .info-section {
     margin-bottom: 2rem;
     background: #f8f9fa;

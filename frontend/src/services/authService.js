@@ -15,7 +15,7 @@ const login = async (email, password) => {
     password,
   });
   const payload = response.data;
-  if (payload?.accessToken) {
+  if (payload?.accessToken || payload?.session?.access_token) {
     localStorage.setItem('user', JSON.stringify(payload));
   }
   return payload;
@@ -26,7 +26,14 @@ const logout = () => {
 };
 
 const getCurrentUser = () => {
-  return JSON.parse(localStorage.getItem('user'));
+  const stored = localStorage.getItem('user');
+  if (!stored) return null;
+  try {
+    return JSON.parse(stored);
+  } catch (e) {
+    localStorage.removeItem('user');
+    return null;
+  }
 };
 
 const requestPasswordReset = async (email) => {
