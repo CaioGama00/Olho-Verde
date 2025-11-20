@@ -79,26 +79,46 @@ function ReportForm({ position, onClose, onSubmit, problemCategories }) {
     <div className="modal-backdrop">
       <div className="modal-content" ref={modalRef}>
         <h2>Reportar um Problema</h2>
-        <p>Localização: {position.lat.toFixed(4)}, {position.lng.toFixed(4)}</p>
+        <p className="location-text">Localização: {position.lat.toFixed(4)}, {position.lng.toFixed(4)}</p>
         <form onSubmit={handleSubmit}>
-          <label htmlFor="problemType">Selecione o tipo de problema:</label>
-          <select
-            id="problemType"
-            name="problemType"
-            value={selectedCategoryId}
-            onChange={(event) => setSelectedCategoryId(event.target.value)}
-          >
+          <label>Selecione o tipo de problema:</label>
+          <div className="category-grid">
             {problemCategories.map((category) => (
-              <option key={category.id} value={category.id}>{category.label}</option>
+              <div
+                key={category.id}
+                className={`category-card ${selectedCategoryId === category.id ? 'selected' : ''}`}
+                onClick={() => setSelectedCategoryId(category.id)}
+              >
+                <div className="category-icon">{category.icon}</div>
+                <span className="category-label">{category.label}</span>
+              </div>
             ))}
-          </select>
-          <label htmlFor="image">Selecione uma imagem:</label>
-          <input type="file" id="image" name="image" accept="image/*" onChange={handleFileChange} />
+          </div>
+
+          <label htmlFor="image">Evidência (Foto):</label>
+          <div className="file-upload-area">
+            <input
+              type="file"
+              id="image"
+              name="image"
+              accept="image/*"
+              onChange={handleFileChange}
+              className="file-input"
+            />
+            <div className="file-upload-placeholder">
+              {selectedFile ? (
+                <span className="file-name">{selectedFile.name}</span>
+              ) : (
+                <span>Clique para enviar uma foto</span>
+              )}
+            </div>
+          </div>
+
           <div className="modal-actions">
-            <button type="submit" className="modal-button submit" disabled={isSubmitting}>
-              {isSubmitting ? 'Enviando...' : 'Enviar'}
-            </button>
             <button type="button" onClick={onClose} className="modal-button cancel">Cancelar</button>
+            <button type="submit" className="modal-button submit" disabled={isSubmitting}>
+              {isSubmitting ? 'Enviando...' : 'Enviar Report'}
+            </button>
           </div>
         </form>
       </div>

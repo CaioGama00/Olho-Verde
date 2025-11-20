@@ -73,7 +73,7 @@ const REPORT_CATEGORIES = [
   {
     id: 'bueiro_entupido',
     label: 'Bueiro entupido',
-    keywords: ['sewer', 'drain', 'manhole', 'gutter', 'culvert', 'pipe', 'dustcart','plastic bag'],
+    keywords: ['sewer', 'drain', 'manhole', 'gutter', 'culvert', 'pipe', 'dustcart', 'plastic bag'],
     failureMessage: 'A imagem não evidencia um bueiro ou ralo entupido. Foque na tampa ou na grade obstruída.',
     threshold: categoryThreshold('CATEGORY_THRESHOLD_BUEIRO', 0.1),
   },
@@ -250,15 +250,15 @@ app.get('/api/reports', async (req, res) => {
 
 // POST /api/reports - Create a new report (protected)
 app.post('/api/reports', authenticateToken, async (req, res) => {
-    const { problem, position } = req.body;
-    const { lat, lng } = position;
-    const { id: user_id } = req.user;
+  const { problem, position } = req.body;
+  const { lat, lng } = position;
+  const { id: user_id } = req.user;
 
-    try {
+  try {
     const { data, error } = await supabase
-        .from('reports')
-        .insert([{ problem, lat, lng, user_id, status: DEFAULT_REPORT_STATUS }])
-        .select();
+      .from('reports')
+      .insert([{ problem, lat, lng, user_id, status: DEFAULT_REPORT_STATUS }])
+      .select();
 
     if (error) throw error;
 
@@ -399,25 +399,53 @@ app.post('/api/auth/register', async (req, res) => {
 
 // POST /api/auth/login - Login a user
 app.post('/api/auth/login', async (req, res) => {
-    const { email, password } = req.body;
+  const { email, password } = req.body;
 
-    try {
-        const { data, error } = await supabase.auth.signInWithPassword({
-            email,
-            password,
-        });
+  try {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
 
-        if (error) throw error;
+    if (error) throw error;
 
-        res.json({
-          accessToken: data.session.access_token,
-          user: data.user,
-          isAdmin: isAdminUser(data.user),
-        });
-    } catch (err) {
-        console.error(err);
-        res.status(400).json({ message: err.message });
+    res.json({
+      accessToken: data.session.access_token,
+      user: data.user,
+      isAdmin: isAdminUser(data.user),
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(400).json({ message: err.message });
+  }
+});
+
+// PUT /api/auth/profile - Update user profile
+app.put('/api/auth/profile', authenticateToken, async (req, res) => {
+  const { name, password } = req.body;
+  const { id } = req.user;
+
+  try {
+    const updates = {
+      data: { name }, // Update metadata
+    };
+
+    if (password && password.trim().length > 0) {
+      updates.password = password;
     }
+
+    const { data, error } = await supabase.auth.admin.updateUserById(id, updates);
+
+    if (error) throw error;
+
+    res.json({
+      message: 'Perfil atualizado com sucesso.',
+      user: data.user,
+    });
+  } catch (err) {
+    console.error('Erro ao atualizar perfil:', err);
+    res.status(400).json({ message: err.message || 'Falha ao atualizar perfil.' });
+  }
 });
 
 app.post('/api/auth/password-reset/request', async (req, res) => {

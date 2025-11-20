@@ -27,9 +27,9 @@ const Navbar = ({ currentUser, onLogout }) => {
             <Link to="/admin">Painel Admin</Link>
           )}
           <Link to="/minhas-denuncias">Minhas Denúncias</Link>
-          <button type="button" className="user-chip" title="Perfil do usuário">
+          <Link to="/perfil" className="user-chip" title="Perfil do usuário">
             {displayName}
-          </button>
+          </Link>
           <button onClick={handleLogout}>Sair</button>
         </div>
       ) : (

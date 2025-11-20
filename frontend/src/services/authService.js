@@ -39,6 +39,19 @@ const confirmPasswordReset = async (accessToken, newPassword) => {
   return response.data;
 };
 
+const updateProfile = async (name, password) => {
+  const response = await api.put('/auth/profile', { name, password });
+  if (response.data.user) {
+    // Update local storage if user data is returned
+    const currentUser = getCurrentUser();
+    if (currentUser) {
+      currentUser.user = response.data.user;
+      localStorage.setItem('user', JSON.stringify(currentUser));
+    }
+  }
+  return response.data;
+};
+
 export default {
   register,
   login,
@@ -46,4 +59,5 @@ export default {
   getCurrentUser,
   requestPasswordReset,
   confirmPasswordReset,
+  updateProfile,
 };

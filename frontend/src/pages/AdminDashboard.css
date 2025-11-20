@@ -10,11 +10,22 @@
   color: #1f2a1f;
 }
 
+@media (max-width: 768px) {
+  .admin-dashboard {
+    margin: 5rem 1rem 2rem;
+    padding: 1.5rem;
+    width: auto;
+    overflow-x: hidden;
+  }
+}
+
 .admin-dashboard header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: 1rem;
 }
 
 .admin-dashboard .subtitle {
@@ -28,6 +39,7 @@
 .admin-dashboard h2 {
   margin: 0.3rem 0 0;
   color: #183f1e;
+  font-size: 1.5rem;
 }
 
 .admin-grid {
@@ -50,6 +62,8 @@
   display: flex;
   flex-direction: column;
   min-height: 350px;
+  overflow: hidden;
+  /* Prevent content spill */
 }
 
 .admin-card-header {
@@ -62,6 +76,7 @@
 .admin-card-header h3 {
   margin: 0;
   color: #1e5128;
+  font-size: 1.2rem;
 }
 
 .refresh-button {
@@ -90,7 +105,7 @@
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
-  min-width: 150px;
+  min-width: 140px;
   flex: 1;
 }
 
@@ -106,6 +121,9 @@
   border-radius: 6px;
   border: 1px solid #ced4da;
   font-size: 0.9rem;
+  width: 100%;
+  /* Ensure full width in mobile */
+  box-sizing: border-box;
 }
 
 .clear-button {
@@ -125,8 +143,11 @@
 
 .table-wrapper {
   flex: 1;
-  overflow: auto;
+  overflow-x: auto;
+  /* Enable horizontal scroll for tables */
   max-height: 55vh;
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
 }
 
 table {
@@ -136,7 +157,8 @@ table {
   color: #212529;
 }
 
-th, td {
+th,
+td {
   padding: 0.75rem;
   text-align: left;
   border-bottom: 1px solid #e9ecef;
