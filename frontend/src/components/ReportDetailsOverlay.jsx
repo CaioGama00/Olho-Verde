@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { FaThumbsUp, FaThumbsDown, FaTimes, FaMapMarkerAlt, FaWater, FaTrashAlt, FaTree, FaRoad, FaImage } from 'react-icons/fa';
 import { CgMoreVertical } from "react-icons/cg";
 import reportService from '../services/reportService';
+import instagramIcon from '../assets/instagram.svg';
 import { getStatusLabel } from '../utils/reportStatus';
 import './ReportDetailsOverlay.css';
 
@@ -271,6 +272,16 @@ const ReportDetailsOverlay = ({ report, currentUser, onClose }) => {
                             </button>
                         </div>
                         {!currentUser && <p className="login-hint">Faça login para votar.</p>}
+                    </div>
+
+                    <div className="share-section">
+                        <h3>Compartilhar</h3>
+                        <div className="share-buttons">
+                            <button className="instagram-button">
+                                <img src={instagramIcon} alt="Instagram" className="instagram-icon" />
+                                <span>Instagram</span>
+                            </button>
+                        </div>
                     </div>
 
                     <div className="comments-section">

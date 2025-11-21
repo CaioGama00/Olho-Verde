@@ -298,6 +298,45 @@
     margin-top: 1rem;
 }
 
+.share-section {
+    margin-bottom: 1.5rem;
+}
+
+.share-section h3 {
+    margin: 0 0 0.75rem 0;
+    font-size: 1rem;
+    color: #495057;
+    font-weight: 600;
+}
+
+.share-buttons {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.instagram-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.5rem 0.9rem;
+    border-radius: 10px;
+    background: #fff;
+    border: 1px solid #e9ecef;
+    cursor: pointer;
+    font-weight: 700;
+    color: #212529;
+}
+
+.instagram-button:hover {
+    background: #f8f9fa;
+}
+
+.instagram-icon {
+    width: 20px;
+    height: 20px;
+    display: inline-block;
+}
+
 .comments-section h3 {
     font-size: 1.2rem;
     margin-bottom: 1.25rem;
