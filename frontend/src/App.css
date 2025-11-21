@@ -708,6 +708,36 @@ nav div {
   flex-direction: column;
 }
 
+.recenter-button {
+  position: absolute;
+  bottom: 24px;
+  right: 24px;
+  z-index: 1000;
+  background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+  border: none;
+  border-radius: 50%;
+  width: 56px;
+  height: 56px;
+  box-shadow: 0 4px 15px rgba(46, 204, 113, 0.4);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  color: white;
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.recenter-button:hover {
+  transform: translateY(-4px) scale(1.05);
+  box-shadow: 0 8px 25px rgba(46, 204, 113, 0.6);
+}
+
+.recenter-button:active {
+  transform: translateY(0) scale(0.95);
+  box-shadow: 0 2px 8px rgba(46, 204, 113, 0.3);
+}
+
 @media (max-width: 768px) {
   .app-header {
     flex-direction: column;
@@ -729,5 +759,13 @@ nav div {
 
   .map-lock-overlay {
     font-size: 0.9rem;
+  }
+
+  .recenter-button {
+    bottom: 20px;
+    right: 20px;
+    width: 48px;
+    height: 48px;
+    font-size: 20px;
   }
 }

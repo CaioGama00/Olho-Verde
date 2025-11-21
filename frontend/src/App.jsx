@@ -1,13 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { Routes, Route, useLocation, useNavigate, Navigate } from 'react-router-dom';
-import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMapEvents, useMap } from 'react-leaflet';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import authService from './services/authService';
 import reportService from './services/reportService';
 import { getStatusLabel } from './utils/reportStatus';
 import L from 'leaflet';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { FaWater, FaTrashAlt, FaTree, FaRoad, FaMapMarkerAlt, FaRecycle } from 'react-icons/fa';
+import { FaWater, FaTrashAlt, FaTree, FaRoad, FaMapMarkerAlt, FaRecycle, FaLocationArrow } from 'react-icons/fa';
 import { CgMoreVertical } from 'react-icons/cg';
 import MarkerClusterGroup from 'react-leaflet-markercluster';
 
@@ -319,6 +319,16 @@ function LocationMarker({
   );
 }
 
+
+// Helper component to access map instance
+const MapController = ({ onMapReady }) => {
+  const map = useMap();
+  useEffect(() => {
+    onMapReady(map);
+  }, [map, onMapReady]);
+  return null;
+};
+
 const FALLBACK_MAP_POSITION = [-23.55052, -46.633308];
 
 const ProtectedRoute = ({ currentUser, children, adminOnly = false }) => {
@@ -516,7 +526,6 @@ function App() {
           zoomControl={!showLanding}
           keyboard={!showLanding}
           className={showLanding ? 'map-locked' : ''}
-          whenCreated={setMapInstance}
           style={{
             height: '100%',
             width: '100%',
@@ -527,6 +536,7 @@ function App() {
             pointerEvents: showLanding ? 'none' : 'auto',
           }}
         >
+          <MapController onMapReady={setMapInstance} />
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -545,6 +555,25 @@ function App() {
             )
           )}
         </MapContainer>
+
+        {location.pathname === '/' && currentUser && (
+          <button
+            className="recenter-button"
+            onClick={() => {
+              if (mapInstance && userLocation) {
+                mapInstance.flyTo([userLocation.lat, userLocation.lng], 15, {
+                  animate: true,
+                  duration: 1.5,
+                });
+              } else if (!userLocation) {
+                alert('Aguardando localização...');
+              }
+            }}
+            title="Minha Localização"
+          >
+            <FaLocationArrow />
+          </button>
+        )}
 
         {selectedReport && (
           <ReportDetailsOverlay
