@@ -597,6 +597,7 @@ app.post('/api/auth/login', async (req, res) => {
 
     res.json({
       accessToken: data.session.access_token,
+      refreshToken: data.session.refresh_token,
       user: data.user,
       isAdmin: isAdminUser(data.user),
     });
@@ -613,7 +614,7 @@ app.put('/api/auth/profile', authenticateToken, async (req, res) => {
 
   try {
     const updates = {
-      data: { name }, // Update metadata
+      user_metadata: { name }, // Update metadata
     };
 
     if (password && password.trim().length > 0) {
@@ -623,6 +624,12 @@ app.put('/api/auth/profile', authenticateToken, async (req, res) => {
     const { data, error } = await supabase.auth.admin.updateUserById(id, updates);
 
     if (error) throw error;
+
+    try {
+      await supabase.from('users').update({ name }).eq('id', id);
+    } catch (syncErr) {
+      console.warn('Não foi possível sincronizar nome em public.users:', syncErr?.message || syncErr);
+    }
 
     res.json({
       message: 'Perfil atualizado com sucesso.',
@@ -809,6 +816,32 @@ app.post('/api/classify-image', upload.single('image'), async (req, res) => {
 });
 
 
+// POST /api/auth/refresh - refresh Supabase session
+app.post('/api/auth/refresh', async (req, res) => {
+  const refreshToken = req.body?.refreshToken;
+  if (!refreshToken) {
+    return res.status(400).json({ message: 'refreshToken is required' });
+  }
+
+  try {
+    const { data, error } = await supabase.auth.refreshSession({ refresh_token: refreshToken });
+    if (error || !data?.session || !data?.user) {
+      return res.status(401).json({ message: 'Invalid refresh token' });
+    }
+
+    res.json({
+      accessToken: data.session.access_token,
+      refreshToken: data.session.refresh_token,
+      user: data.user,
+      session: data.session,
+      isAdmin: isAdminUser(data.user),
+    });
+  } catch (err) {
+    console.error('Refresh error:', err);
+    res.status(401).json({ message: 'Invalid refresh token' });
+  }
+});
+
 // Admin: Fetch all reports with owner data
 app.get('/api/admin/reports', authenticateToken, requireAdmin, async (req, res) => {
   try {
@@ -848,9 +881,12 @@ app.patch('/api/admin/reports/:id/status', authenticateToken, requireAdmin, asyn
       .update({ status })
       .eq('id', reportId)
       .select('*')
-      .single();
+      .maybeSingle();
 
     if (error) throw error;
+    if (!data) {
+      return res.status(404).json({ error: 'Report não encontrado.' });
+    }
 
     const profileMap = await fetchUserProfilesByIds([data.user_id]);
     const reportWithUser = { ...data, users: profileMap.get(data.user_id) || null };

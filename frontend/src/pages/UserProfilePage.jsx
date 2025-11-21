@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import authService from '../services/authService';
 import './UserProfilePage.css';
 
-const UserProfilePage = () => {
+const UserProfilePage = ({ currentUser, setCurrentUser }) => {
     const navigate = useNavigate();
     const [user, setUser] = useState(null);
     const [name, setName] = useState('');
@@ -14,17 +14,17 @@ const UserProfilePage = () => {
     const [message, setMessage] = useState({ type: '', text: '' });
 
     useEffect(() => {
-        const currentUser = authService.getCurrentUser();
-        if (!currentUser) {
+        const stored = currentUser || authService.getCurrentUser();
+        if (!stored) {
             navigate('/login');
             return;
         }
-        setUser(currentUser);
+        setUser(stored);
 
-        const metaName = currentUser.user?.user_metadata?.name || '';
+        const metaName = stored.user?.user_metadata?.name || '';
         setName(metaName);
-        setEmail(currentUser.user?.email || '');
-    }, [navigate]);
+        setEmail(stored.user?.email || '');
+    }, [navigate, currentUser]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -37,7 +37,20 @@ const UserProfilePage = () => {
 
         setLoading(true);
         try {
-            await authService.updateProfile(name, password);
+            const result = await authService.updateProfile(name, password);
+            if (result?.user) {
+                setUser(result.user);
+                if (setCurrentUser) {
+                    setCurrentUser((prev) => {
+                        const merged = { ...(prev || {}), user: result.user };
+                        merged.user.user_metadata = { ...(merged.user.user_metadata || {}), name };
+                        merged.user.raw_user_meta_data = { ...(merged.user.raw_user_meta_data || {}), name };
+                        return merged;
+                    });
+                }
+            }
+            // also update local display immediately
+            setName(name);
             setMessage({ type: 'success', text: 'Perfil atualizado com sucesso!' });
             setPassword('');
             setConfirmPassword('');

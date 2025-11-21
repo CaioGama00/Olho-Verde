@@ -48,14 +48,44 @@ const confirmPasswordReset = async (accessToken, newPassword) => {
 
 const updateProfile = async (name, password) => {
   const response = await api.put('/auth/profile', { name, password });
-  if (response.data.user) {
-    // Update local storage if user data is returned
-    const currentUser = getCurrentUser();
-    if (currentUser) {
-      currentUser.user = response.data.user;
-      localStorage.setItem('user', JSON.stringify(currentUser));
+
+  // Update local storage regardless of response structure if successful
+  const currentUser = getCurrentUser();
+  if (currentUser && currentUser.user) {
+    const updatedUser = {
+      ...currentUser,
+      user: {
+        ...currentUser.user,
+        user_metadata: {
+          ...(currentUser.user.user_metadata || {}),
+          name,
+        },
+        raw_user_meta_data: {
+          ...(currentUser.user.raw_user_meta_data || {}),
+          name,
+        },
+      }
+    };
+
+    // If the API returned a user object, merge it in
+    if (response.data && response.data.user) {
+      updatedUser.user = {
+        ...updatedUser.user,
+        ...response.data.user,
+        user_metadata: {
+          ...updatedUser.user.user_metadata,
+          ...(response.data.user.user_metadata || {}),
+          name, // Ensure name is preserved
+        }
+      };
     }
+
+    localStorage.setItem('user', JSON.stringify(updatedUser));
+
+    // Return the updated user so the caller can use it
+    return { ...response.data, user: updatedUser.user };
   }
+
   return response.data;
 };
 

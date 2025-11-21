@@ -96,6 +96,7 @@ const userLocationIcon = L.divIcon({
   iconSize: [48, 48],
   iconAnchor: [24, 24],
   popupAnchor: [0, -12],
+  zIndexOffset: 1000,
 });
 
 const newReportIcon = L.divIcon({
@@ -178,54 +179,21 @@ function ReportMarker({ report }) {
 
 function LocationMarker({
   currentUser,
-  mapInstance,
   selectedReportId,
   reports,
   refreshReports,
-  initialUserLocation,
+  userLocation,
 }) {
   const [newMarker, setNewMarker] = useState(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const newMarkerRef = useRef(null);
-  const [userLocation, setUserLocation] = useState(initialUserLocation || null);
-  const [locationError, setLocationError] = useState('');
   const allowedRadiusMeters = 800;
 
-  useEffect(() => {
-    if (!initialUserLocation) return;
-    setUserLocation((prev) => {
-      if (prev && prev.lat === initialUserLocation.lat && prev.lng === initialUserLocation.lng) {
-        return prev;
-      }
-      return initialUserLocation;
-    });
-  }, [initialUserLocation]);
-
-  useEffect(() => {
-    if (!currentUser) return;
-    if (userLocation) return;
-    if (!navigator.geolocation) {
-      setLocationError('Seu navegador não permite obter localização.');
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const coords = {
-          lat: pos.coords.latitude,
-          lng: pos.coords.longitude,
-        };
-        setUserLocation(coords);
-      },
-      () => setLocationError('Não foi possível obter sua localização.'),
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 }
-    );
-  }, [currentUser, userLocation]);
-
-  useMapEvents({
+  const map = useMapEvents({
     click(e) {
       if (isFormOpen || !currentUser) return;
       if (!userLocation) {
-        alert(locationError || 'Ative a localização para posicionar sua denúncia.');
+        alert('Aguardando localização ou localização indisponível. Ative o GPS.');
         return;
       }
       const userLatLng = L.latLng(userLocation.lat, userLocation.lng);
@@ -253,18 +221,24 @@ function LocationMarker({
   };
 
   useEffect(() => {
-    if (!selectedReportId || !mapInstance || !reports.length) return;
+    if (!selectedReportId || !map || !reports.length) return;
     const targetId = Number(selectedReportId);
     const targetReport = reports.find((r) => Number(r.id) === targetId);
     if (!targetReport) return;
 
     if (targetReport.position) {
-      mapInstance.flyTo(targetReport.position, Math.max(mapInstance.getZoom(), 15), {
+      map.flyTo(targetReport.position, Math.max(map.getZoom(), 15), {
         animate: true,
         duration: 0.75,
       });
     }
-  }, [selectedReportId, reports, mapInstance]);
+  }, [selectedReportId, reports, map]);
+
+  useEffect(() => {
+    if (userLocation && map && !selectedReportId) {
+      map.setView([userLocation.lat, userLocation.lng], 15);
+    }
+  }, [userLocation, map, selectedReportId]);
 
   const handleFormClose = () => {
     setIsFormOpen(false);
@@ -291,15 +265,15 @@ function LocationMarker({
   return (
     <>
       {userLocation && (
-        <Marker position={userLocation} icon={userLocationIcon}>
+        <Marker position={userLocation} icon={userLocationIcon} zIndexOffset={1000}>
           <Popup>
             <div className="popup-content">
               <h4>Sua localização aproximada</h4>
               <p>Ajuste a denúncia em um raio de até 800m deste ponto.</p>
             </div>
-      </Popup>
-    </Marker>
-  )}
+          </Popup>
+        </Marker>
+      )}
       <MarkerClusterGroup>
         {reports.map(report => (
           <ReportMarker
@@ -387,29 +361,43 @@ function App() {
       return;
     }
 
-    let cancelled = false;
+    if (location.pathname !== '/' || !currentUser) return;
 
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        if (cancelled) return;
-        const coords = {
-          lat: pos.coords.latitude,
-          lng: pos.coords.longitude,
-        };
-        setUserLocation(coords);
-        setMapCenter([coords.lat, coords.lng]);
-        setHasUserLocation(true);
-      },
-      (error) => {
-        console.warn('Não foi possível obter sua localização inicial:', error);
-      },
-      { enableHighAccuracy: true, timeout: 8000, maximumAge: 300000 }
+    const handleSuccess = (pos) => {
+      const coords = {
+        lat: pos.coords.latitude,
+        lng: pos.coords.longitude,
+      };
+      setUserLocation(coords);
+      setHasUserLocation(true);
+      // Only center map if we haven't done it yet or if it's the first fix
+      // But the other useEffect handles the flyTo logic based on hasUserLocation
+    };
+
+    const handleError = (error) => {
+      console.warn('Erro ao obter localização:', error);
+    };
+
+    // Try to get position immediately
+    navigator.geolocation.getCurrentPosition(handleSuccess, handleError, {
+      enableHighAccuracy: true,
+      timeout: 10000,
+      maximumAge: 0
+    });
+
+    // And also watch for changes
+    const watchId = navigator.geolocation.watchPosition(
+      handleSuccess,
+      handleError,
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
 
     return () => {
-      cancelled = true;
+      if (watchId !== undefined && watchId !== null) {
+        navigator.geolocation.clearWatch(watchId);
+      }
     };
-  }, []);
+  }, [location.pathname, currentUser]);
 
   useEffect(() => {
     if (!location.hash || location.pathname === '/reset-password') {
@@ -446,19 +434,25 @@ function App() {
     }
   }, [mapInstance, isAuthenticated]);
 
-  useEffect(() => {
-    if (!mapInstance || !hasUserLocation || !userLocation) return;
 
-    const zoom = Math.max(mapInstance.getZoom(), 13);
-    mapInstance.flyTo([userLocation.lat, userLocation.lng], zoom, {
-      animate: true,
-      duration: 0.75,
-    });
-  }, [mapInstance, userLocation, hasUserLocation]);
+
+  useEffect(() => {
+    const handleAuthLogout = () => {
+      handleLogout();
+    };
+
+    window.addEventListener('auth:logout', handleAuthLogout);
+    return () => {
+      window.removeEventListener('auth:logout', handleAuthLogout);
+    };
+  }, []);
 
   const handleLogout = async () => {
     await authService.logout();
     setCurrentUser(null);
+    setUserLocation(null);
+    setHasUserLocation(false);
+    navigate('/login');
   };
 
   const visibleReports = reports.filter((r) => (r.status || '').toLowerCase() !== 'resolvida');
@@ -541,11 +535,10 @@ function App() {
             currentUser ? (
               <LocationMarker
                 currentUser={currentUser}
-                mapInstance={mapInstance}
                 selectedReportId={selectedReportId}
                 reports={visibleReports}
                 refreshReports={fetchReports}
-                initialUserLocation={userLocation}
+                userLocation={userLocation}
               />
             ) : (
               <LandingPage />
@@ -583,7 +576,7 @@ function App() {
           } />
           <Route path="/perfil" element={
             <ProtectedRoute currentUser={currentUser}>
-              <UserProfilePage currentUser={currentUser} />
+              <UserProfilePage currentUser={currentUser} setCurrentUser={setCurrentUser} />
             </ProtectedRoute>
           } />
         </Routes>
