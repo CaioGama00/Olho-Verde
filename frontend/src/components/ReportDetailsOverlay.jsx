@@ -195,6 +195,78 @@ const ReportDetailsOverlay = ({ report, currentUser, onClose }) => {
             });
     };
 
+    const [shareNotice, setShareNotice] = useState('');
+
+    const handleShare = async () => {
+        const imageUrl = activeReport.image_url;
+        const proxyUrl = `/api/reports/${activeReport.id}/image-proxy`;
+        const description = activeReport.description || '';
+        const locationText = address || '';
+        const eventDate = activeReport.created_at ? new Date(activeReport.created_at).toLocaleString('pt-BR', {
+            day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
+        }) : '';
+        const caption = `Local: ${locationText}\nDenúncia feita em ${eventDate}\nDescrição: ${description}\n\nCompartilhado via Olho-Verde`;
+
+        // Helper: copy caption to clipboard (with graceful fallback)
+        const copyCaption = async () => {
+            try {
+                await navigator.clipboard.writeText(caption);
+                return true;
+            } catch (e) {
+                // fallback to prompt so user can copy manually
+                try {
+                    // show prompt with caption so user can copy
+                    // eslint-disable-next-line no-alert
+                    window.prompt('Copie a legenda abaixo:', caption);
+                    return false;
+                } catch (er) {
+                    return false;
+                }
+            }
+        };
+
+        // Try to download image via proxy (this avoids CORS problems)
+        if (imageUrl) {
+            try {
+                const res = await fetch(proxyUrl);
+                if (!res.ok) throw new Error('Falha no proxy');
+                const blob = await res.blob();
+                const ext = (blob.type && blob.type.split('/')[1]) || 'jpg';
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `report-${activeReport.id}.${ext}`;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                URL.revokeObjectURL(url);
+            } catch (e) {
+                console.error('Erro ao baixar imagem via proxy:', e);
+                // continue: still try to copy caption and redirect
+            }
+        }
+
+        const copied = await copyCaption();
+
+        // Notify user in the original tab
+        const noticeParts = [];
+        if (imageUrl) noticeParts.push('Imagem baixada');
+        if (copied) noticeParts.push('Legenda copiada');
+        else noticeParts.push('Legenda disponível para cópia');
+        const notice = noticeParts.join(' e ') + '.';
+        setShareNotice(notice);
+        // remove notice after 6 seconds
+        setTimeout(() => setShareNotice(''), 6000);
+
+        // Open Instagram create page in new tab
+        try {
+            window.open('https://www.instagram.com', '_blank');
+        } catch (e) {
+            // fallback to instagram home
+            window.location.href = 'https://www.instagram.com/';
+        }
+    };
+
     const statusLabel = getStatusLabel(activeReport.status);
     const problemColor = BASE_COLORS[activeReport.problem] || BASE_COLORS.default;
     const ProblemIcon = problemIcons[activeReport.problem] || <FaMapMarkerAlt />;
@@ -277,11 +349,14 @@ const ReportDetailsOverlay = ({ report, currentUser, onClose }) => {
                     <div className="share-section">
                         <h3>Compartilhar</h3>
                         <div className="share-buttons">
-                            <button className="instagram-button">
+                            <button className="instagram-button" onClick={handleShare}>
                                 <img src={instagramIcon} alt="Instagram" className="instagram-icon" />
                                 <span>Instagram</span>
                             </button>
                         </div>
+                        {shareNotice && (
+                            <div className={`share-notice ${shareNotice ? 'show' : ''}`} role="status" aria-live="polite">{shareNotice}</div>
+                        )}
                     </div>
 
                     <div className="comments-section">

@@ -926,6 +926,57 @@ app.delete('/api/admin/users/:id', authenticateToken, requireAdmin, async (req, 
   }
 });
 
+// GET /api/reports/:id/image-proxy - proxy image to avoid CORS issues
+app.get('/api/reports/:id/image-proxy', async (req, res) => {
+  const reportId = parseInt(req.params.id, 10);
+  if (Number.isNaN(reportId)) {
+    return res.status(400).json({ error: 'ID inválido.' });
+  }
+
+  try {
+    const { data: report, error } = await supabase
+      .from('reports')
+      .select('id, image_url, image_drive_id')
+      .eq('id', reportId)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!report) return res.status(404).json({ error: 'Report não encontrado' });
+
+    // Prefer public or stored image URL if available
+    let sourceUrl = report.image_url || null;
+
+    // If no public URL but we have a drive id, create a signed URL
+    if (!sourceUrl && report.image_drive_id) {
+      const { data: signed, error: signErr } = await supabase.storage
+        .from(SUPABASE_STORAGE_BUCKET)
+        .createSignedUrl(report.image_drive_id, 60); // 60 seconds
+      if (signErr) throw signErr;
+      sourceUrl = signed?.signedUrl || null;
+    }
+
+    if (!sourceUrl) {
+      return res.status(404).json({ error: 'Nenhuma imagem disponível para este report.' });
+    }
+
+    // Stream the image from the source to the client (server-side request avoids CORS)
+    const response = await axios.get(sourceUrl, { responseType: 'stream' });
+
+    // Forward content-type and other useful headers
+    if (response.headers['content-type']) {
+      res.setHeader('Content-Type', response.headers['content-type']);
+    }
+    if (response.headers['content-length']) {
+      res.setHeader('Content-Length', response.headers['content-length']);
+    }
+
+    response.data.pipe(res);
+  } catch (err) {
+    console.error('Erro no image-proxy:', err?.message || err);
+    res.status(502).json({ error: 'Falha ao buscar a imagem.' });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Backend server is running on http://localhost:${PORT}`);
 });
