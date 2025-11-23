@@ -6,6 +6,9 @@ const { authenticateToken, requireAdmin } = require('../middleware/auth');
 // Admin: Fetch all reports with owner data
 router.get('/reports', authenticateToken, requireAdmin, adminController.getAllReports);
 
+// Admin: Moderate report
+router.patch('/reports/:id/moderate', authenticateToken, requireAdmin, adminController.moderateReport);
+
 // Admin: Update report status
 router.patch('/reports/:id/status', authenticateToken, requireAdmin, adminController.updateReportStatus);
 

@@ -13,6 +13,7 @@ const getAllReports = async (req, res) => {
         const { data, error } = await supabase
             .from('reports')
             .select('*')
+            .eq('moderation_status', 'aprovado')
             .order('created_at', { ascending: false });
         if (error) throw error;
 
@@ -81,7 +82,8 @@ const getReportById = async (req, res) => {
             .from('reports')
             .select('*')
             .eq('id', reportId)
-            .single();
+            .eq('moderation_status', 'aprovado')
+            .maybeSingle();
 
         if (error) throw error;
         if (!report) return res.status(404).json({ error: 'Report não encontrado' });

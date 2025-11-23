@@ -278,3 +278,51 @@ select {
   border-radius: 8px;
   margin-bottom: 1.5rem;
 }
+
+.moderation-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.action-btn {
+  border: none;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-weight: bold;
+  transition: transform 0.1s;
+}
+
+.action-btn:hover {
+  transform: scale(1.1);
+}
+
+.approve-btn {
+  background-color: #28a745;
+  color: white;
+}
+
+.reject-btn {
+  background-color: #dc3545;
+  color: white;
+}
+
+.status-pill.aprovado {
+  background-color: rgba(40, 167, 69, 0.15);
+  color: #218838;
+}
+
+.status-pill.rejeitado {
+  background-color: rgba(220, 53, 69, 0.15);
+  color: #c82333;
+}
+
+.status-pill.pendente {
+  background-color: rgba(255, 193, 7, 0.15);
+  color: #856404;
+}
