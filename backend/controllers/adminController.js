@@ -59,6 +59,59 @@ const updateReportStatus = async (req, res) => {
     }
 };
 
+// Admin: Moderate report (approve/reject)
+const moderateReport = async (req, res) => {
+    const reportId = parseInt(req.params.id, 10);
+    const { action, reason } = req.body;
+
+    if (!['approve', 'reject'].includes(action)) {
+        return res.status(400).json({ error: 'Ação inválida. Use "approve" ou "reject".' });
+    }
+
+    if (!reason || reason.trim().length === 0) {
+        return res.status(400).json({ error: 'O motivo é obrigatório.' });
+    }
+
+    if (reason.trim().length > 500) {
+        return res.status(400).json({ error: 'O motivo deve ter no máximo 500 caracteres.' });
+    }
+
+    const moderationStatus = action === 'approve' ? 'aprovado' : 'rejeitado';
+    const { id: adminId } = req.user;
+
+    try {
+        const { data, error } = await supabase
+            .from('reports')
+            .update({
+                moderation_status: moderationStatus,
+                moderation_reason: reason.trim(),
+                moderated_by: adminId,
+                moderated_at: new Date().toISOString(),
+            })
+            .eq('id', reportId)
+            .select('*')
+            .maybeSingle();
+
+        if (error) throw error;
+        if (!data) {
+            return res.status(404).json({ error: 'Report não encontrado.' });
+        }
+
+        const profileMap = await fetchUserProfilesByIds([data.user_id, data.moderated_by]);
+
+        const reportWithUser = {
+            ...data,
+            users: profileMap.get(data.user_id) || null,
+            moderator: profileMap.get(data.moderated_by) || null,
+        };
+
+        res.json(buildReportResponse(reportWithUser, { includeReporterContact: true }));
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+};
+
 // Admin: List users
 const listUsers = async (req, res) => {
     try {
@@ -126,6 +179,7 @@ const deleteUser = async (req, res) => {
 module.exports = {
     getAllReports,
     updateReportStatus,
+    moderateReport,
     listUsers,
     toggleUserBlock,
     deleteUser,
