@@ -1,5 +1,7 @@
 # Olho Verde
 
+Acesse o frontend: [olhoverde.netlify.app](https://olhoverde.netlify.app)
+
 ![Status](https://img.shields.io/badge/status-em%20desenvolvimento-yellow)
 
 ## 1. Visão Geral
@@ -109,4 +111,4 @@ Para configurar e executar o projeto localmente, siga os passos abaixo:
 ### URLs de Deploy
 
 *   **Frontend:** [olhoverde.netlify.app](https://olhoverde.netlify.app)
-*   **Backend:** [https://olho-verde.onrender.com](https://olho-verde.onrender.com)
+*   **Backend:** [olho-verde.onrender.com](https://olho-verde.onrender.com)
