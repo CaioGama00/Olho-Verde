@@ -129,6 +129,36 @@ const AdminDashboard = ({ currentUser }) => {
     }
   };
 
+  const handleModerateReport = async (reportId, action) => {
+    const reason = window.prompt(
+      action === 'approve'
+        ? 'Motivo da aprovação (opcional):'
+        : 'Motivo da rejeição (obrigatório):'
+    );
+
+    if (action === 'reject' && !reason) {
+      alert('É necessário informar um motivo para rejeitar.');
+      return;
+    }
+
+    setStatusLoadingMap((prev) => ({ ...prev, [reportId]: true }));
+    try {
+      const response = await adminService.moderateReport(reportId, action, reason || 'Aprovado pelo admin');
+      setReports((prev) =>
+        prev.map((report) => (report.id === reportId ? response.data : report))
+      );
+    } catch (error) {
+      console.error('Erro ao moderar:', error);
+      alert('Erro ao moderar denúncia.');
+    } finally {
+      setStatusLoadingMap((prev) => {
+        const clone = { ...prev };
+        delete clone[reportId];
+        return clone;
+      });
+    }
+  };
+
   const handleUserBlockToggle = async (userId, shouldBlock) => {
     setUserActionMap((prev) => ({ ...prev, [userId]: true }));
     setErrorMessage('');
@@ -314,6 +344,9 @@ const AdminDashboard = ({ currentUser }) => {
                 <th onClick={() => requestSort('status')} className="sortable-header">
                   Status {getSortIndicator('status')}
                 </th>
+                <th onClick={() => requestSort('moderation_status')} className="sortable-header">
+                  Moderação {getSortIndicator('moderation_status')}
+                </th>
                 <th onClick={() => requestSort('created_at')} className="sortable-header">
                   Criada em {getSortIndicator('created_at')}
                 </th>
@@ -346,6 +379,33 @@ const AdminDashboard = ({ currentUser }) => {
                           </option>
                         ))}
                       </select>
+                    </td>
+                    <td>
+                      <div className="moderation-cell">
+                        <span className={`status-pill ${report.moderation_status || 'pendente'}`}>
+                          {report.moderation_status || 'pendente'}
+                        </span>
+                        {report.moderation_status !== 'aprovado' && (
+                          <button
+                            className="action-btn approve-btn"
+                            onClick={() => handleModerateReport(report.id, 'approve')}
+                            disabled={Boolean(statusLoadingMap[report.id])}
+                            title="Aprovar"
+                          >
+                            ✓
+                          </button>
+                        )}
+                        {report.moderation_status !== 'rejeitado' && (
+                          <button
+                            className="action-btn reject-btn"
+                            onClick={() => handleModerateReport(report.id, 'reject')}
+                            disabled={Boolean(statusLoadingMap[report.id])}
+                            title="Rejeitar"
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </div>
                     </td>
                     <td>
                       {new Date(report.created_at).toLocaleString('pt-BR', {

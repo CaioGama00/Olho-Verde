@@ -12,10 +12,14 @@ const toggleUserBlock = (userId, block) =>
 
 const deleteUser = (userId) => api.delete(`/admin/users/${userId}`);
 
+const moderateReport = (reportId, action, reason) =>
+  api.patch(`/admin/reports/${reportId}/moderate`, { action, reason });
+
 export default {
   getReports,
   updateReportStatus,
   getUsers,
   toggleUserBlock,
   deleteUser,
+  moderateReport,
 };
