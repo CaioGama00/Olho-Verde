@@ -959,6 +959,53 @@ app.get('/api/reports/:id/image-proxy', async (req, res) => {
       return res.status(404).json({ error: 'Nenhuma imagem disponível para este report.' });
     }
 
+    // If we have the storage path (image_drive_id), download directly from Supabase Storage
+    if (report.image_drive_id) {
+      try {
+        const pathInBucket = report.image_drive_id;
+        const { data: fileStream, error: downloadError } = await supabase.storage
+          .from(SUPABASE_STORAGE_BUCKET)
+          .download(pathInBucket);
+
+        if (downloadError) throw downloadError;
+
+        // Infer content type from extension as fallback
+        const ext = path.extname(pathInBucket).toLowerCase();
+        const mimeMap = {
+          '.jpg': 'image/jpeg',
+          '.jpeg': 'image/jpeg',
+          '.png': 'image/png',
+          '.webp': 'image/webp',
+          '.gif': 'image/gif',
+          '.avif': 'image/avif',
+          '.svg': 'image/svg+xml'
+        };
+        const contentType = mimeMap[ext] || 'application/octet-stream';
+        res.setHeader('Content-Type', contentType);
+
+        // fileStream can be a Node stream or a Blob-like object
+        if (fileStream && typeof fileStream.pipe === 'function') {
+          fileStream.pipe(res);
+        } else if (fileStream && typeof fileStream.arrayBuffer === 'function') {
+          const buffer = Buffer.from(await fileStream.arrayBuffer());
+          res.end(buffer);
+        } else {
+          // Fallback: fetch via signed URL
+          const { data: signed, error: signErr } = await supabase.storage
+            .from(SUPABASE_STORAGE_BUCKET)
+            .createSignedUrl(pathInBucket, 60);
+          if (signErr) throw signErr;
+          const response = await axios.get(signed.signedUrl, { responseType: 'stream' });
+          if (response.headers['content-type']) res.setHeader('Content-Type', response.headers['content-type']);
+          response.data.pipe(res);
+        }
+        return;
+      } catch (err) {
+        console.error('Erro ao baixar diretamente do storage:', err?.message || err);
+        // fallback to trying sourceUrl via axios below
+      }
+    }
+
     // Stream the image from the source to the client (server-side request avoids CORS)
     const response = await axios.get(sourceUrl, { responseType: 'stream' });
 

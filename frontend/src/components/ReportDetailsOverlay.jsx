@@ -3,6 +3,8 @@ import { FaThumbsUp, FaThumbsDown, FaTimes, FaMapMarkerAlt, FaWater, FaTrashAlt,
 import { CgMoreVertical } from "react-icons/cg";
 import reportService from '../services/reportService';
 import instagramIcon from '../assets/instagram.svg';
+import facebookIcon from '../assets/facebook.png';
+import twitterIcon from '../assets/twitter.png';
 import { getStatusLabel } from '../utils/reportStatus';
 import './ReportDetailsOverlay.css';
 
@@ -197,7 +199,7 @@ const ReportDetailsOverlay = ({ report, currentUser, onClose }) => {
 
     const [shareNotice, setShareNotice] = useState('');
 
-    const handleShare = async () => {
+    const handleShareTo = async (openUrl) => {
         const imageUrl = activeReport.image_url;
         const proxyUrl = `/api/reports/${activeReport.id}/image-proxy`;
         const description = activeReport.description || '';
@@ -213,9 +215,7 @@ const ReportDetailsOverlay = ({ report, currentUser, onClose }) => {
                 await navigator.clipboard.writeText(caption);
                 return true;
             } catch (e) {
-                // fallback to prompt so user can copy manually
                 try {
-                    // show prompt with caption so user can copy
                     // eslint-disable-next-line no-alert
                     window.prompt('Copie a legenda abaixo:', caption);
                     return false;
@@ -242,7 +242,6 @@ const ReportDetailsOverlay = ({ report, currentUser, onClose }) => {
                 URL.revokeObjectURL(url);
             } catch (e) {
                 console.error('Erro ao baixar imagem via proxy:', e);
-                // continue: still try to copy caption and redirect
             }
         }
 
@@ -255,15 +254,18 @@ const ReportDetailsOverlay = ({ report, currentUser, onClose }) => {
         else noticeParts.push('Legenda disponível para cópia');
         const notice = noticeParts.join(' e ') + '.';
         setShareNotice(notice);
-        // remove notice after 6 seconds
         setTimeout(() => setShareNotice(''), 6000);
 
-        // Open Instagram create page in new tab
+        // Open target URL. If it's a function (like for twitter with text), call it, else open directly.
         try {
-            window.open('https://www.instagram.com', '_blank');
+            if (typeof openUrl === 'function') {
+                openUrl(caption);
+            } else {
+                window.open(openUrl, '_blank');
+            }
         } catch (e) {
-            // fallback to instagram home
-            window.location.href = 'https://www.instagram.com/';
+            console.warn('Falha ao abrir destino de compartilhamento:', e);
+            if (typeof openUrl === 'string') window.location.href = openUrl;
         }
     };
 
@@ -349,9 +351,17 @@ const ReportDetailsOverlay = ({ report, currentUser, onClose }) => {
                     <div className="share-section">
                         <h3>Compartilhar</h3>
                         <div className="share-buttons">
-                            <button className="instagram-button" onClick={handleShare}>
+                            <button className="instagram-button" onClick={() => handleShareTo('https://www.instagram.com/')}>
                                 <img src={instagramIcon} alt="Instagram" className="instagram-icon" />
                                 <span>Instagram</span>
+                            </button>
+                            <button className="instagram-button" onClick={() => handleShareTo((caption) => window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(caption)}`, '_blank'))}>
+                                <img src={twitterIcon} alt="Twitter" className="instagram-icon" />
+                                <span>Twitter</span>
+                            </button>
+                            <button className="instagram-button" onClick={() => handleShareTo('https://www.facebook.com/')}>
+                                <img src={facebookIcon} alt="Facebook" className="instagram-icon" />
+                                <span>Facebook</span>
                             </button>
                         </div>
                         {shareNotice && (
