@@ -13,9 +13,13 @@ O backend fornece as seguintes APIs:
     *   `POST /api/auth/password-reset/confirm`: Valida o token recebido por email e define uma nova senha.
 
 *   **Gerenciamento de Reports:**
-    *   `GET /api/reports`: Obtém todos os reports.
-    *   `POST /api/reports`: Cria um novo report (requer autenticação).
+    *   `GET /api/reports`: Obtém todos os reports aprovados.
+    *   `GET /api/reports/:id`: Detalhes de um report, comentários e voto do usuário autenticado.
+    *   `GET /api/reports/:id/comments`: Lista comentários do report.
+    *   `POST /api/reports/:id/comments`: Cria um comentário (requer autenticação).
+    *   `POST /api/reports`: Cria um novo report com upload de imagem (requer autenticação).
     *   `POST /api/reports/:id/vote`: Vota em um report (requer autenticação).
+    *   `GET /api/reports/:id/image-proxy`: Proxy para servir a imagem do report (contorna CORS e entrega a partir do Supabase Storage ou URL pública).
 
 ## Armazenamento de Dados
 

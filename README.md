@@ -46,7 +46,7 @@ Toda a documentação referente ao planejamento, requisitos, arquitetura e teste
 
 *   **Frontend:** React (com Vite)
 *   **Backend:** Node.js com Express.js
-*   **Banco de Dados:** JSON Server (para simulação de API RESTful com `db.json`)
+*   **Banco de Dados e Autenticação:** Supabase
 
 ## 6. Como Contribuir
 
@@ -87,8 +87,8 @@ Para configurar e executar o projeto localmente, siga os passos abaixo:
     cd ..
     ```
 
-5. **Configuração do Frontend (opcional, mas recomendado):**
-   - Crie um arquivo `frontend/.env.local` baseado em `frontend/.env.example` definindo `VITE_API_BASE_URL` para apontar para o backend que deseja usar (ex.: `http://localhost:3001/api`).
+5. **Configuração do Frontend (recomendado):**
+   - Crie um arquivo `frontend/.env.local` baseado em `frontend/.env.example` definindo `VITE_API_BASE_URL` para apontar para o backend que deseja usar (ex.: `http://localhost:3001/api` ou a URL pública do backend). Isso evita depender apenas do proxy de dev do Vite.
 
 ### Execução
 
@@ -112,3 +112,14 @@ Para configurar e executar o projeto localmente, siga os passos abaixo:
 
 *   **Frontend:** [olhoverde.netlify.app](https://olhoverde.netlify.app)
 *   **Backend:** [olho-verde.onrender.com](https://olho-verde.onrender.com)
+
+### APIs principais (backend)
+
+*   `GET /api/reports`: lista reports aprovados.
+*   `GET /api/reports/:id`: detalhes de um report + comentários + voto do usuário (se autenticado).
+*   `GET /api/reports/:id/comments`: lista comentários.
+*   `POST /api/reports/:id/comments`: adiciona comentário (requer autenticação).
+*   `POST /api/reports`: cria report com upload de imagem (requer autenticação).
+*   `POST /api/reports/:id/vote`: registra voto (requer autenticação).
+*   `GET /api/reports/:id/image-proxy`: proxy de imagem (resolve CORS para compartilhamento/download).
+*   Autenticação: `POST /api/auth/register`, `POST /api/auth/login`, `POST /api/auth/password-reset/*`.
