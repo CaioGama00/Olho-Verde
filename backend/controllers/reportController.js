@@ -1,7 +1,10 @@
+const axios = require('axios');
+const path = require('path');
 const supabase = require('../db');
 const { getUserFromRequest } = require('../middleware/auth');
 const { buildReportResponse } = require('../utils/reportHelpers');
 const { DEFAULT_REPORT_STATUS } = require('../config/constants');
+const { SUPABASE_STORAGE_BUCKET } = require('../config/env');
 const { uploadImageToStorage } = require('../services/storageService');
 
 // GET /api/reports - Get all reports
@@ -319,6 +322,95 @@ const voteOnReport = async (req, res) => {
     }
 };
 
+// GET /api/reports/:id/image-proxy - proxy image to avoid CORS issues
+const proxyReportImage = async (req, res) => {
+    const reportId = parseInt(req.params.id, 10);
+    if (Number.isNaN(reportId)) {
+        return res.status(400).json({ error: 'ID inválido.' });
+    }
+
+    try {
+        const { data: report, error } = await supabase
+            .from('reports')
+            .select('id, image_url, image_drive_id')
+            .eq('id', reportId)
+            .maybeSingle();
+
+        if (error) throw error;
+        if (!report) return res.status(404).json({ error: 'Report não encontrado' });
+
+        let sourceUrl = report.image_url || null;
+
+        if (!sourceUrl && report.image_drive_id) {
+            const { data: signed, error: signErr } = await supabase.storage
+                .from(SUPABASE_STORAGE_BUCKET)
+                .createSignedUrl(report.image_drive_id, 60);
+            if (signErr) throw signErr;
+            sourceUrl = signed?.signedUrl || null;
+        }
+
+        if (!sourceUrl) {
+            return res.status(404).json({ error: 'Nenhuma imagem disponível para este report.' });
+        }
+
+        if (report.image_drive_id) {
+            try {
+                const pathInBucket = report.image_drive_id;
+                const { data: fileStream, error: downloadError } = await supabase.storage
+                    .from(SUPABASE_STORAGE_BUCKET)
+                    .download(pathInBucket);
+
+                if (downloadError) throw downloadError;
+
+                const ext = path.extname(pathInBucket).toLowerCase();
+                const mimeMap = {
+                    '.jpg': 'image/jpeg',
+                    '.jpeg': 'image/jpeg',
+                    '.png': 'image/png',
+                    '.webp': 'image/webp',
+                    '.gif': 'image/gif',
+                    '.avif': 'image/avif',
+                    '.svg': 'image/svg+xml',
+                };
+                const contentType = mimeMap[ext] || 'application/octet-stream';
+                res.setHeader('Content-Type', contentType);
+
+                if (fileStream && typeof fileStream.pipe === 'function') {
+                    fileStream.pipe(res);
+                } else if (fileStream && typeof fileStream.arrayBuffer === 'function') {
+                    const buffer = Buffer.from(await fileStream.arrayBuffer());
+                    res.end(buffer);
+                } else {
+                    const { data: signed, error: signErr } = await supabase.storage
+                        .from(SUPABASE_STORAGE_BUCKET)
+                        .createSignedUrl(pathInBucket, 60);
+                    if (signErr) throw signErr;
+                    const response = await axios.get(signed.signedUrl, { responseType: 'stream' });
+                    if (response.headers['content-type']) res.setHeader('Content-Type', response.headers['content-type']);
+                    response.data.pipe(res);
+                }
+                return;
+            } catch (err) {
+                console.error('Erro ao baixar diretamente do storage:', err?.message || err);
+            }
+        }
+
+        const response = await axios.get(sourceUrl, { responseType: 'stream' });
+
+        if (response.headers['content-type']) {
+            res.setHeader('Content-Type', response.headers['content-type']);
+        }
+        if (response.headers['content-length']) {
+            res.setHeader('Content-Length', response.headers['content-length']);
+        }
+
+        response.data.pipe(res);
+    } catch (err) {
+        console.error('Erro no image-proxy:', err?.message || err);
+        res.status(502).json({ error: 'Falha ao buscar a imagem.' });
+    }
+};
+
 module.exports = {
     getAllReports,
     getReportById,
@@ -326,4 +418,5 @@ module.exports = {
     addComment,
     createReport,
     voteOnReport,
+    proxyReportImage,
 };

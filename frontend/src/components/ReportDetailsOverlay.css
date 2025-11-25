@@ -298,6 +298,79 @@
     margin-top: 1rem;
 }
 
+.share-section {
+    margin-bottom: 1.5rem;
+}
+
+.share-section h3 {
+    margin: 0 0 0.75rem 0;
+    font-size: 1rem;
+    color: #495057;
+    font-weight: 600;
+}
+
+.share-buttons {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.instagram-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.5rem 0.9rem;
+    border-radius: 10px;
+    background: #fff;
+    border: 1px solid #e9ecef;
+    cursor: pointer;
+    font-weight: 700;
+    color: #212529;
+}
+
+.instagram-button:hover {
+    background: #f8f9fa;
+}
+
+.instagram-icon {
+    width: 20px;
+    height: 20px;
+    display: inline-block;
+}
+
+/* Toast-style notice for share actions */
+.share-notice {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%) translateY(10px);
+    bottom: 1.25rem;
+    background: linear-gradient(180deg, rgba(33,37,41,0.98), rgba(33,37,41,0.95));
+    color: #fff;
+    padding: 0.6rem 1rem;
+    border-radius: 999px;
+    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.35);
+    font-weight: 700;
+    font-size: 0.95rem;
+    z-index: 30;
+    opacity: 0;
+    pointer-events: none;
+    max-width: calc(100% - 3rem);
+    text-align: center;
+    transition: transform 240ms cubic-bezier(0.2, 0.9, 0.2, 1), opacity 240ms ease;
+}
+
+.share-notice.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+    pointer-events: auto;
+}
+
+@media (max-width: 480px) {
+    .share-notice {
+        bottom: 1rem;
+        font-size: 0.9rem;
+        padding: 0.5rem 0.9rem;
+    }
+}
 .comments-section h3 {
     font-size: 1.2rem;
     margin-bottom: 1.25rem;

@@ -9,6 +9,9 @@ const upload = multer({ storage: multer.memoryStorage() });
 // GET /api/reports - Get all reports
 router.get('/', reportController.getAllReports);
 
+// GET /api/reports/:id/image-proxy - proxy image to avoid CORS issues
+router.get('/:id/image-proxy', reportController.proxyReportImage);
+
 // GET /api/reports/:id - Report details + comments + user vote
 router.get('/:id', reportController.getReportById);
 

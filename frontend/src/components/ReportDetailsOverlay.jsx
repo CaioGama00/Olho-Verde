@@ -3,6 +3,9 @@ import { FaThumbsUp, FaThumbsDown, FaTimes, FaMapMarkerAlt, FaWater, FaTrashAlt,
 import { CgMoreVertical } from "react-icons/cg";
 import reportService from '../services/reportService';
 import { getStatusLabel } from '../utils/reportStatus';
+import instagramIcon from '../assets/instagram.svg';
+import facebookIcon from '../assets/facebook.png';
+import twitterIcon from '../assets/twitter.png';
 import './ReportDetailsOverlay.css';
 
 const BASE_COLORS = {
@@ -149,7 +152,6 @@ const ReportDetailsOverlay = ({ report, currentUser, onClose }) => {
         reportService.vote(report.id, voteToSend)
             .then((response) => {
                 const payload = response?.data || {};
-                // Sync with backend response if needed, but usually optimistic is fine
             })
             .catch(error => {
                 console.error("Failed to persist vote:", error);
@@ -194,10 +196,52 @@ const ReportDetailsOverlay = ({ report, currentUser, onClose }) => {
             });
     };
 
+    
+    const [shareNotice, setShareNotice] = useState('');
+
+    const handleShareTo = async (openUrl) => {
+        const description = activeReport.description || '';
+        const locationText = address || '';
+        const eventDate = activeReport.created_at ? new Date(activeReport.created_at).toLocaleString('pt-BR', {
+            day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
+        }) : '';
+        const caption = `Local: ${locationText}\nDenúncia feita em ${eventDate}\nDescrição: ${description}\n\nCompartilhado via Olho-Verde`;
+
+        const copyCaption = async () => {
+            try {
+                await navigator.clipboard.writeText(caption);
+                return true;
+            } catch (e) {
+                try {
+                    window.prompt('Copie a legenda abaixo:', caption);
+                    return false;
+                } catch (er) {
+                    return false;
+                }
+            }
+        };
+
+        const copied = await copyCaption();
+        const notice = copied ? 'Legenda copiada.' : 'Copie a legenda antes de compartilhar.';
+        setShareNotice(notice);
+        setTimeout(() => setShareNotice(''), 6000);
+
+        try {
+            if (typeof openUrl === 'function') {
+                openUrl(caption);
+            } else {
+                window.open(openUrl, '_blank');
+            }
+        } catch (e) {
+            console.warn('Falha ao abrir destino de compartilhamento:', e);
+            if (typeof openUrl === 'string') window.location.href = openUrl;
+        }
+    };
     const statusLabel = getStatusLabel(activeReport.status);
     const problemColor = BASE_COLORS[activeReport.problem] || BASE_COLORS.default;
     const ProblemIcon = problemIcons[activeReport.problem] || <FaMapMarkerAlt />;
 
+    
     return (
         <div className="report-overlay-container">
             <div className="report-overlay-backdrop" onClick={onClose} />
@@ -272,7 +316,26 @@ const ReportDetailsOverlay = ({ report, currentUser, onClose }) => {
                         </div>
                         {!currentUser && <p className="login-hint">Faça login para votar.</p>}
                     </div>
-
+                    <div className="share-section">
+                        <h3>Compartilhar</h3>
+                        <div className="share-buttons">
+                            <button className="instagram-button" onClick={() => handleShareTo('https://www.instagram.com/')}>
+                                <img src={instagramIcon} alt="Instagram" className="instagram-icon" />
+                                <span>Instagram</span>
+                            </button>
+                            <button className="instagram-button" onClick={() => handleShareTo((caption) => window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(caption)}`, '_blank'))}>
+                                <img src={twitterIcon} alt="Twitter" className="instagram-icon" />
+                                <span>Twitter</span>
+                            </button>
+                            <button className="instagram-button" onClick={() => handleShareTo('https://www.facebook.com/')}>
+                                <img src={facebookIcon} alt="Facebook" className="instagram-icon" />
+                                <span>Facebook</span>
+                            </button>
+                        </div>
+                        {shareNotice && (
+                            <div className={`share-notice ${shareNotice ? 'show' : ''}`} role="status" aria-live="polite">{shareNotice}</div>
+                        )}
+                    </div>
                     <div className="comments-section">
                         <h3>Comentários ({comments.length})</h3>
 
