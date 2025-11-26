@@ -1,19 +1,19 @@
-import React, { useState } from 'react';
+import React from 'react';
 import './FilterBar.css';
 
 const FilterBar = ({ 
   problemCategories, 
   onFilterChange, 
-  currentFilters 
+  currentFilters,
+  hideToggle = false,
+  forceExpanded = false
 }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
-
+  
   const statusOptions = [
     { value: '', label: 'Todos os Status' },
-    { value: 'pending', label: '🟡 Pendente' },
-    { value: 'in_progress', label: '🔵 Em Análise' },
-    { value: 'resolved', label: '🟢 Resolvida' },
-    { value: 'cancelled', label: '🔴 Cancelada' }
+    { value: 'nova', label: '🟡 Pendente' },
+    { value: 'em_analise', label: '🔵 Em Análise' },
+    { value: 'resolvida', label: '🟢 Resolvida' }
   ];
 
   const handleCategoryChange = (categoryId) => {
@@ -25,7 +25,9 @@ const FilterBar = ({
   };
 
   const handleStatusChange = (status) => {
-    onFilterChange({ ...currentFilters, status });
+    // Se clicar no mesmo status já selecionado, limpa o filtro (toggle)
+    const newStatus = currentFilters.status === status ? '' : status;
+    onFilterChange({ ...currentFilters, status: newStatus });
   };
 
   const clearAllFilters = () => {
@@ -35,73 +37,68 @@ const FilterBar = ({
   const hasActiveFilters = (currentFilters?.categories?.length || 0) > 0 || (currentFilters?.status || '') !== '';
 
   return (
-    <div className={`filter-bar ${isExpanded ? 'expanded' : ''}`}>
-      <div className="filter-header">
-        <button 
-          className="filter-toggle"
-          onClick={() => setIsExpanded(!isExpanded)}
-        >
-          <span>🎯 Filtros</span>
-          {hasActiveFilters && <span className="filter-badge">!</span>}
-        </button>
-        
+    <div className="filter-bar-content">
+      {/* Cabeçalho do Filtro */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+        <h3 style={{ margin: 0, color: 'var(--primary-color)' }}>Filtros</h3>
         {hasActiveFilters && (
-          <button className="clear-filters" onClick={clearAllFilters}>
-            Limpar
+          <button 
+            onClick={clearAllFilters}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#e74c3c',
+              fontSize: '0.85rem',
+              cursor: 'pointer',
+              fontWeight: '600'
+            }}
+          >
+            Limpar tudo
           </button>
         )}
       </div>
 
-      {isExpanded && (
-        <div className="filter-content">
-          {/* Filtro por Categoria */}
-          <div className="filter-section">
-            <h4>Categorias</h4>
-            <div className="category-filters">
-              {problemCategories.map(category => (
-                <label key={category.id} className="category-filter-item">
-                  <input
-                    type="checkbox"
-                    checked={currentFilters.categories.includes(category.id)}
-                    onChange={() => handleCategoryChange(category.id)}
-                  />
-                  <span className="category-icon">{category.icon}</span>
-                  <span>{category.label}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-
-          {/* Filtro por Status */}
-          <div className="filter-section">
-            <h4>Status</h4>
-            <div className="status-filters">
-              {statusOptions.map(option => (
-                <label key={option.value} className="status-filter-item">
-                  <input
-                    type="radio"
-                    name="status"
-                    value={option.value}
-                    checked={currentFilters.status === option.value}
-                    onChange={() => handleStatusChange(option.value)}
-                  />
-                  <span>{option.label}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-
-          {/* Contador de resultados */}
-          <div className="filter-results">
-            <small>
-              {hasActiveFilters 
-                ? `Filtros ativos: ${currentFilters.categories.length} categoria(s) ${currentFilters.status ? '+ status' : ''}`
-                : 'Mostrando todas as denúncias'
-              }
-            </small>
-          </div>
+      {/* Filtro por Categoria */}
+      <div className="filter-section">
+        <h3>Categorias</h3>
+        <div className="category-filters" style={{ display: 'flex', flexWrap: 'wrap' }}>
+          {problemCategories.map(category => (
+            <button
+              key={category.id}
+              className={`filter-chip ${currentFilters.categories.includes(category.id) ? 'active' : ''}`}
+              onClick={() => handleCategoryChange(category.id)}
+              title={category.label}
+            >
+              <span className="category-icon">{category.icon}</span>
+              <span>{category.label}</span>
+            </button>
+          ))}
         </div>
-      )}
+      </div>
+
+      {/* Filtro por Status */}
+      <div className="filter-section">
+        <h3>Status</h3>
+        <div className="status-filters">
+          {statusOptions.map(option => (
+            <button
+              key={option.value}
+              className={`status-chip-button ${currentFilters.status === option.value ? 'active' : ''}`}
+              onClick={() => handleStatusChange(option.value)}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      </div>
+      
+      {/* Resumo */}
+      <div className="filter-results" style={{ marginTop: '1rem', fontSize: '0.8rem', color: '#888', textAlign: 'center' }}>
+        {hasActiveFilters 
+          ? `${currentFilters.categories.length} categorias • ${currentFilters.status ? 'Status filtrado' : 'Todos status'}`
+          : 'Mostrando tudo'
+        }
+      </div>
     </div>
   );
 };

@@ -723,9 +723,13 @@ nav div {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 22px;
   color: white;
   transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.recenter-button svg {
+  width: 24px;
+  height: 24px;
 }
 
 .recenter-button:hover {
@@ -736,6 +740,142 @@ nav div {
 .recenter-button:active {
   transform: translateY(0) scale(0.95);
   box-shadow: 0 2px 8px rgba(46, 204, 113, 0.3);
+}
+
+.filter-button {
+  position: absolute;
+  bottom: 90px; /* acima do recenter */
+  right: 24px;
+  z-index: 1000;
+  background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+  border: none;
+  border-radius: 50%;
+  width: 56px;
+  height: 56px;
+  box-shadow: 0 4px 15px rgba(46, 204, 113, 0.4);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.filter-button svg {
+  width: 24px;
+  height: 24px;
+}
+
+.filter-button:hover {
+  transform: translateY(-4px) scale(1.05);
+  box-shadow: 0 8px 25px rgba(46, 204, 113, 0.6);
+}
+
+.filter-button:active {
+  transform: translateY(0) scale(0.95);
+  box-shadow: 0 2px 8px rgba(46, 204, 113, 0.3);
+}
+
+.filter-panel {
+  position: absolute;
+  bottom: 24px;
+  right: 100px; /* Posiciona à esquerda dos botões flutuantes */
+  width: 320px;
+  max-height: calc(100vh - 140px); /* Evita que ultrapasse o topo */
+  overflow-y: auto;
+  
+  /* Estilo Glassmorphism */
+  background: var(--glass-bg);
+  border-radius: 16px;
+  padding: 1.25rem;
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(10px);
+  z-index: 1200;
+  display: none;
+
+  /* Animação */
+  transform-origin: bottom right;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transform: scale(0.9) translateX(20px);
+  opacity: 0;
+}
+
+.filter-panel.visible {
+  display: block;
+  transform: scale(1) translateX(0);
+  opacity: 1;
+}
+
+/* Filter Chips Styles */
+.filter-bar-content h3 {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #666;
+}
+
+.filter-section {
+  margin-bottom: 1rem;
+}
+
+.filter-section:last-child {
+  margin-bottom: 0;
+}
+
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.8rem;
+  background: #f0f2f5;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  color: #555;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-right: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.filter-chip:hover {
+  background: #e1e4e8;
+}
+
+.filter-chip.active {
+  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+  color: white;
+  box-shadow: 0 4px 10px rgba(46, 204, 113, 0.3);
+  border-color: transparent;
+}
+
+.status-chip-button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 0.6rem 0.8rem;
+  background: #fff;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  margin-bottom: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.9rem;
+  color: #333;
+}
+
+.status-chip-button:hover {
+  background: #f9f9f9;
+  border-color: #ddd;
+}
+
+.status-chip-button.active {
+  background: #e8f5e9;
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+  font-weight: 600;
 }
 
 @media (max-width: 768px) {
@@ -766,6 +906,31 @@ nav div {
     right: 20px;
     width: 48px;
     height: 48px;
-    font-size: 20px;
+    /* font-size: 30px; */
+  }
+
+  .filter-panel {
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    max-height: 80vh;
+    border-radius: 24px 24px 0 0; /* Arredondado apenas no topo */
+    padding: 1.5rem;
+    padding-bottom: calc(1.5rem + env(safe-area-inset-bottom));
+    
+    /* Animação vindo de baixo */
+    transform-origin: bottom center;
+    transform: translateY(100%);
+  }
+
+  .filter-panel.visible {
+    transform: translateY(0);
+  }
+  
+  /* Ajuste para os botões não ficarem por baixo do painel quando aberto */
+  .filter-panel.visible ~ .recenter-button,
+  .filter-panel.visible ~ .filter-button {
+    z-index: 1100; /* Mantém botões acessíveis ou pode-se ocultá-los se preferir */
   }
 }
