@@ -7,7 +7,7 @@ import reportService from './services/reportService';
 import { getStatusLabel } from './utils/reportStatus';
 import L from 'leaflet';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { FaWater, FaTrashAlt, FaTree, FaRoad, FaMapMarkerAlt, FaRecycle, FaLocationArrow } from 'react-icons/fa';
+import { FaWater, FaTrashAlt, FaTree, FaRoad, FaMapMarkerAlt, FaRecycle, FaLocationArrow, FaSearch } from 'react-icons/fa';
 import { CgMoreVertical } from 'react-icons/cg';
 import MarkerClusterGroup from 'react-leaflet-markercluster';
 
@@ -21,6 +21,7 @@ import LandingPage from './pages/LandingPage';
 import Navbar from './components/Navbar';
 import ReportDetailsOverlay from './components/ReportDetailsOverlay';
 import ReportForm from './ReportForm';
+import FilterBar from './components/FilterBar';
 
 import './App.css';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
@@ -348,6 +349,10 @@ function App() {
   const [userLocation, setUserLocation] = useState(null);
   const [hasUserLocation, setHasUserLocation] = useState(false);
   const [reports, setReports] = useState([]);
+  const [filterPanelOpen, setFilterPanelOpen] = useState(false);
+  const [filters, setFilters] = useState({ categories: [], status: '' });
+
+  const updateFilter = (changes) => setFilters((prev) => ({ ...prev, ...changes }));
   const location = useLocation();
   const navigate = useNavigate();
   const selectedReportId = new URLSearchParams(location.search).get('reportId');
@@ -465,7 +470,42 @@ function App() {
     navigate('/login');
   };
 
-  const visibleReports = reports.filter((r) => (r.status || '').toLowerCase() !== 'resolvida');
+  const visibleReports = reports.filter((report) => {
+    const reportStatus = (report.status || '').toLowerCase();
+    
+    // Tenta encontrar a categoria correspondente pelo Label ou pelo ID
+    // Isso resolve o problema de o banco salvar "Foco de lixo" (Label) e o filtro esperar "foco_lixo" (ID)
+    const categoryObj = problemCategories.find(cat => cat.label === report.problem || cat.id === report.problem);
+    const reportCategoryId = categoryObj ? categoryObj.id : (report.problem || '').toLowerCase().replace(/ /g, '_');
+
+    // 1. Filtragem por Status
+    const statusFilterActive = filters.status && filters.status !== '';
+
+    let matchesStatus = true;
+
+    if (statusFilterActive) {
+      matchesStatus = reportStatus === filters.status;
+    } else {
+      // Se não tem filtro de status, esconde apenas as resolvidas
+      matchesStatus = reportStatus !== 'resolvida';
+    }
+
+    if (!matchesStatus) {
+      return false;
+    }
+
+    // 2. Filtragem por Categoria
+    const categoryFilterActive = filters.categories && filters.categories.length > 0;
+
+    if (categoryFilterActive) {
+      const matchesCategory = filters.categories.includes(reportCategoryId);
+      if (!matchesCategory) {
+        return false;
+      }
+    }
+
+    return true;
+  });
 
   const selectedReport = selectedReportId
     ? visibleReports.find(r => String(r.id) === String(selectedReportId))
@@ -573,6 +613,29 @@ function App() {
           >
             <FaLocationArrow />
           </button>
+        )}
+
+        {/* Floating filter button above the recenter button */}
+        {location.pathname === '/' && currentUser && (
+          <>
+            <button
+              className="filter-button"
+              onClick={() => setFilterPanelOpen(!filterPanelOpen)}
+              aria-label={filterPanelOpen ? 'Fechar filtros' : 'Abrir filtros'}
+            >
+              <FaSearch />
+            </button>
+
+            <div className={`filter-panel ${filterPanelOpen ? 'visible' : ''}`}>
+              <FilterBar
+                problemCategories={problemCategories}
+                currentFilters={filters}
+                onFilterChange={updateFilter}
+                hideToggle={true}
+                forceExpanded={filterPanelOpen}
+              />
+            </div>
+          </>
         )}
 
         {selectedReport && (
