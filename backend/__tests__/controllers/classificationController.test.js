@@ -1,4 +1,7 @@
-jest.mock('../../config/env');
+jest.mock('../../config/env', () => ({
+  IMAGE_CLASSIFICATION_BYPASS: false,
+  IMAGE_CLASSIFICATION_ENABLED: true,
+}));
 jest.mock('../../services/classificationService');
 jest.mock('../../config/constants', () => ({
   REPORT_CATEGORIES: [
