@@ -2,6 +2,25 @@ const supabase = require('../db');
 const { buildReportResponse } = require('../utils/reportHelpers');
 const { fetchUserProfilesByIds } = require('../utils/userProfile');
 const { REPORT_STATUSES } = require('../config/constants');
+const { sendEmail } = require('../services/emailService');
+
+//function to send status update email to reporter
+async function sendStatusUpdateEmail(report, status) {
+  if (!report?.users?.email) return;
+  console.log(report);
+
+  await sendEmail({
+    to: report.users.email,
+    subject: "Atualização na sua denúncia",
+    html: `
+      <p>Olá ${report.users.full_name || ""},</p>
+      <p>O status da sua denúncia foi atualizado para:</p>
+      <p><strong>${status}</strong></p>
+      <br>
+      <p>Obrigado por usar nossa plataforma.</p>
+    `,
+  });
+}
 
 // Admin: Fetch all reports with owner data
 const getAllReports = async (req, res) => {
@@ -31,6 +50,7 @@ const getAllReports = async (req, res) => {
 const updateReportStatus = async (req, res) => {
     const reportId = parseInt(req.params.id, 10);
     const { status } = req.body;
+    console.log("entrei no adminController - updateReportStatus");
 
     if (!REPORT_STATUSES.includes(status)) {
         return res.status(400).json({ error: 'Status inválido.' });
@@ -51,6 +71,7 @@ const updateReportStatus = async (req, res) => {
 
         const profileMap = await fetchUserProfilesByIds([data.user_id]);
         const reportWithUser = { ...data, users: profileMap.get(data.user_id) || null };
+        await sendStatusUpdateEmail(reportWithUser, status);
 
         res.json(buildReportResponse(reportWithUser, { includeReporterContact: true }));
     } catch (err) {
