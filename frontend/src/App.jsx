@@ -542,7 +542,7 @@ function App() {
 
   return (
     <div className="app-container">
-      <header className="app-header">
+      <header className={`app-header ${showLanding ? 'hidden' : ''}`}>
         <div className="app-logo-container">
 
           <button type="button" className="logo-button" onClick={() => navigate('/')}>

@@ -39,6 +39,10 @@ body {
   position: relative;
 }
 
+.app-header.hidden {
+  display: none;
+}
+
 .app-logo-container {
   display: flex;
   align-items: center;
