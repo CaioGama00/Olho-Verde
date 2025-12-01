@@ -184,6 +184,8 @@ function LocationMarker({
   reports,
   refreshReports,
   userLocation,
+  hasCenteredOnUser,
+  setHasCenteredOnUser,
 }) {
   const [newMarker, setNewMarker] = useState(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -236,10 +238,11 @@ function LocationMarker({
   }, [selectedReportId, reports, map]);
 
   useEffect(() => {
-    if (userLocation && map && !selectedReportId) {
+    if (!hasCenteredOnUser && userLocation && map && !selectedReportId) {
       map.setView([userLocation.lat, userLocation.lng], 15);
+      setHasCenteredOnUser(true);
     }
-  }, [userLocation, map, selectedReportId]);
+  }, [userLocation, map, selectedReportId, hasCenteredOnUser, setHasCenteredOnUser]);
 
   const handleFormClose = () => {
     setIsFormOpen(false);
@@ -348,6 +351,7 @@ function App() {
   const [mapCenter, setMapCenter] = useState(FALLBACK_MAP_POSITION);
   const [userLocation, setUserLocation] = useState(null);
   const [hasUserLocation, setHasUserLocation] = useState(false);
+  const [hasCenteredOnUser, setHasCenteredOnUser] = useState(false);
   const [reports, setReports] = useState([]);
   const [filterPanelOpen, setFilterPanelOpen] = useState(false);
   const [filters, setFilters] = useState({ categories: [], status: '' });
@@ -385,8 +389,7 @@ function App() {
       };
       setUserLocation(coords);
       setHasUserLocation(true);
-      // Only center map if we haven't done it yet or if it's the first fix
-      // But the other useEffect handles the flyTo logic based on hasUserLocation
+      // Only center map if we haven't done it yet or if it's the first fix.
     };
 
     const handleError = (error) => {
@@ -467,6 +470,7 @@ function App() {
     setCurrentUser(null);
     setUserLocation(null);
     setHasUserLocation(false);
+    setHasCenteredOnUser(false);
     navigate('/login');
   };
 
@@ -589,6 +593,8 @@ function App() {
                 reports={visibleReports}
                 refreshReports={fetchReports}
                 userLocation={userLocation}
+                hasCenteredOnUser={hasCenteredOnUser}
+                setHasCenteredOnUser={setHasCenteredOnUser}
               />
             ) : (
               <LandingPage />
@@ -605,6 +611,7 @@ function App() {
                   animate: true,
                   duration: 1.5,
                 });
+                setHasCenteredOnUser(true);
               } else if (!userLocation) {
                 alert('Aguardando localização...');
               }

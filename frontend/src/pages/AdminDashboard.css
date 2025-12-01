@@ -326,3 +326,150 @@ select {
   background-color: rgba(255, 193, 7, 0.15);
   color: #856404;
 }
+
+.status-pill.status-nova {
+  background: #fff6e6;
+  color: #a66900;
+}
+
+.status-pill.status-em_analise {
+  background: #e6f0ff;
+  color: #245dbf;
+}
+
+.status-pill.status-resolvida {
+  background: #e6f8ef;
+  color: #1f8f45;
+}
+
+.preview-btn {
+  border: none;
+  background: #1e5128;
+  color: #fff;
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.preview-btn:hover {
+  background: #183f1e;
+}
+
+.preview-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 1rem;
+}
+
+.preview-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 1.5rem;
+  max-width: 960px;
+  width: 100%;
+  position: relative;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+}
+
+.preview-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  border: none;
+  background: #f1f3f5;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+
+.preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.preview-statuses {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.preview-body {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.preview-image {
+  background: #f8f9fa;
+  border-radius: 10px;
+  padding: 0.5rem;
+  min-height: 280px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.preview-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+.preview-placeholder {
+  color: #6c757d;
+  text-align: center;
+}
+
+.preview-details p {
+  margin: 0 0 0.5rem;
+  color: #1f2a1f;
+}
+
+.preview-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.preview-action {
+  border: none;
+  border-radius: 8px;
+  padding: 0.55rem 1.2rem;
+  font-weight: 700;
+  cursor: pointer;
+  color: #fff;
+}
+
+.preview-action.approve {
+  background: #28a745;
+}
+
+.preview-action.reject {
+  background: #dc3545;
+}
+
+.preview-action:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+@media (max-width: 900px) {
+  .preview-body {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import adminService from '../services/adminService';
-import { REPORT_STATUS_OPTIONS } from '../utils/reportStatus';
+import { REPORT_STATUS_OPTIONS, getStatusLabel } from '../utils/reportStatus';
 import './AdminDashboard.css';
 
 const AdminDashboard = ({ currentUser }) => {
@@ -13,6 +13,7 @@ const AdminDashboard = ({ currentUser }) => {
   const [errorMessage, setErrorMessage] = useState('');
   const [statusLoadingMap, setStatusLoadingMap] = useState({});
   const [userActionMap, setUserActionMap] = useState({});
+  const [previewReport, setPreviewReport] = useState(null);
   const [reportFilters, setReportFilters] = useState({
     status: '',
     search: '',
@@ -147,6 +148,9 @@ const AdminDashboard = ({ currentUser }) => {
       setReports((prev) =>
         prev.map((report) => (report.id === reportId ? response.data : report))
       );
+      if (previewReport?.id === reportId) {
+        setPreviewReport(response.data);
+      }
     } catch (error) {
       console.error('Erro ao moderar:', error);
       alert('Erro ao moderar denúncia.');
@@ -341,6 +345,9 @@ const AdminDashboard = ({ currentUser }) => {
                 <th onClick={() => requestSort('reporterEmail')} className="sortable-header">
                   Email {getSortIndicator('reporterEmail')}
                 </th>
+                <th>
+                  Visualizar
+                </th>
                 <th onClick={() => requestSort('status')} className="sortable-header">
                   Status {getSortIndicator('status')}
                 </th>
@@ -355,7 +362,7 @@ const AdminDashboard = ({ currentUser }) => {
             <tbody>
               {sortedReports.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="empty-row">
+                  <td colSpan={8} className="empty-row">
                     Nenhuma denúncia encontrada com os filtros atuais.
                   </td>
                 </tr>
@@ -366,6 +373,16 @@ const AdminDashboard = ({ currentUser }) => {
                     <td>{report.problem}</td>
                     <td>{report.reporterName || '—'}</td>
                     <td>{report.reporterEmail || '—'}</td>
+                    <td>
+                      <button
+                        type="button"
+                        className="preview-btn"
+                        onClick={() => setPreviewReport(report)}
+                        title="Visualizar denúncia"
+                      >
+                        Ver
+                      </button>
+                    </td>
                     <td>
                       <select
                         className={`status-select status-${report.status || 'default'}`}
@@ -579,6 +596,84 @@ const AdminDashboard = ({ currentUser }) => {
         {renderReportsTable()}
         {renderUsersTable()}
       </section>
+
+      {previewReport && (
+        <div className="preview-backdrop" onClick={() => setPreviewReport(null)}>
+          <div className="preview-card" onClick={(e) => e.stopPropagation()}>
+            <button
+              className="preview-close"
+              onClick={() => setPreviewReport(null)}
+              aria-label="Fechar visualização"
+            >
+              ×
+            </button>
+            <div className="preview-header">
+              <div>
+                <p className="subtitle">Denúncia #{previewReport.id}</p>
+                <h3>{previewReport.problem || 'Tipo não informado'}</h3>
+              </div>
+              <div className="preview-statuses">
+                <span className={`status-pill ${previewReport.moderation_status || 'pendente'}`}>
+                  {previewReport.moderation_status || 'pendente'}
+                </span>
+                <span className={`status-pill status-${previewReport.status || 'default'}`}>
+                  {getStatusLabel(previewReport.status) || 'Sem status'}
+                </span>
+              </div>
+            </div>
+
+            <div className="preview-body">
+              <div className="preview-image">
+                {previewReport.image_url ? (
+                  <img src={previewReport.image_url} alt={`Denúncia ${previewReport.id}`} />
+                ) : (
+                  <div className="preview-placeholder">Sem imagem enviada</div>
+                )}
+              </div>
+              <div className="preview-details">
+                <p><strong>Descrição:</strong> {previewReport.description || 'Nenhuma descrição fornecida.'}</p>
+                <p><strong>Usuário:</strong> {previewReport.reporterName || '—'}</p>
+                <p><strong>Email:</strong> {previewReport.reporterEmail || '—'}</p>
+                <p>
+                  <strong>Coordenadas:</strong>{' '}
+                  {(previewReport.position?.lat ?? previewReport.lat)?.toFixed
+                    ? `${Number(previewReport.position?.lat ?? previewReport.lat).toFixed(5)}, ${Number(previewReport.position?.lng ?? previewReport.lng).toFixed(5)}`
+                    : '—'}
+                </p>
+                <p>
+                  <strong>Criada em:</strong>{' '}
+                  {previewReport.created_at
+                    ? new Date(previewReport.created_at).toLocaleString('pt-BR', {
+                        dateStyle: 'short',
+                        timeStyle: 'short',
+                      })
+                    : '—'}
+                </p>
+              </div>
+            </div>
+
+            <div className="preview-actions">
+              <button
+                className="preview-action approve"
+                disabled={Boolean(statusLoadingMap[previewReport.id])}
+                onClick={() => handleModerateReport(previewReport.id, 'approve')}
+              >
+                Aprovar
+              </button>
+              <button
+                className="preview-action reject"
+                disabled={Boolean(statusLoadingMap[previewReport.id])}
+                onClick={() => handleModerateReport(previewReport.id, 'reject')}
+              >
+                Rejeitar
+              </button>
+              <button className="clear-button" onClick={() => setPreviewReport(null)}>
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

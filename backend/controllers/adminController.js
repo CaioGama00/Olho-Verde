@@ -4,20 +4,63 @@ const { fetchUserProfilesByIds } = require('../utils/userProfile');
 const { REPORT_STATUSES } = require('../config/constants');
 const { sendEmail } = require('../services/emailService');
 
+const STATUS_LABELS = {
+  nova: 'Recebida',
+  em_analise: 'Em andamento',
+  resolvida: 'Resolvida',
+};
+
+const safeReporterName = (report) =>
+  report?.users?.full_name ||
+  report?.users?.name ||
+  report?.users?.user_metadata?.name ||
+  '';
+
 //function to send status update email to reporter
 async function sendStatusUpdateEmail(report, status) {
   if (!report?.users?.email) return;
-  console.log(report);
+  const statusLabel = STATUS_LABELS[status] || status || 'Atualizado';
+  const reporterName = safeReporterName(report);
 
   await sendEmail({
     to: report.users.email,
-    subject: "Atualização na sua denúncia",
+    subject: `Sua denúncia foi atualizada: ${statusLabel}`,
     html: `
-      <p>Olá ${report.users.full_name || ""},</p>
-      <p>O status da sua denúncia foi atualizado para:</p>
-      <p><strong>${status}</strong></p>
-      <br>
-      <p>Obrigado por usar nossa plataforma.</p>
+      <p>Olá ${reporterName || 'morador(a)'},</p>
+      <p>Atualizamos sua denúncia ${report.id ? `(#${report.id})` : ''}.</p>
+      <ul>
+        <li><strong>Status:</strong> ${statusLabel}</li>
+        <li><strong>Tipo:</strong> ${report.problem || 'Não informado'}</li>
+        <li><strong>Descrição:</strong> ${report.description || 'Sem descrição'}</li>
+      </ul>
+      <p>${status === 'resolvida'
+        ? 'Encerramos o chamado. Obrigado por avisar e contar com a gente!'
+        : 'Já estamos cuidando disso e avisaremos quando houver novidades.'}</p>
+      <p>Equipe Olho Verde</p>
+    `,
+  });
+}
+
+async function sendModerationEmail(report, action, reason) {
+  if (!report?.users?.email) return;
+  const reporterName = safeReporterName(report);
+  const statusLabel = STATUS_LABELS[report.status] || report.status || 'Em andamento';
+  const isApproved = action === 'approve';
+
+  await sendEmail({
+    to: report.users.email,
+    subject: isApproved ? 'Sua denúncia foi aprovada' : 'Sua denúncia foi rejeitada',
+    html: `
+      <p>Olá ${reporterName || 'morador(a)'},</p>
+      <p>Sua denúncia ${report.id ? `(#${report.id})` : ''} foi ${isApproved ? 'aprovada' : 'rejeitada'} pela moderação.</p>
+      ${isApproved
+        ? `<p>Ela ficará visível no mapa com o status <strong>${statusLabel}</strong>.</p>`
+        : `<p>Motivo: <strong>${reason || 'Não informado'}</strong></p>`}
+      <ul>
+        <li><strong>Tipo:</strong> ${report.problem || 'Não informado'}</li>
+        <li><strong>Descrição:</strong> ${report.description || 'Sem descrição'}</li>
+      </ul>
+      <p>Obrigado por usar o Olho Verde.</p>
     `,
   });
 }
@@ -50,7 +93,6 @@ const getAllReports = async (req, res) => {
 const updateReportStatus = async (req, res) => {
     const reportId = parseInt(req.params.id, 10);
     const { status } = req.body;
-    console.log("entrei no adminController - updateReportStatus");
 
     if (!REPORT_STATUSES.includes(status)) {
         return res.status(400).json({ error: 'Status inválido.' });
@@ -125,6 +167,12 @@ const moderateReport = async (req, res) => {
             users: profileMap.get(data.user_id) || null,
             moderator: profileMap.get(data.moderated_by) || null,
         };
+
+        try {
+            await sendModerationEmail(reportWithUser, action, reason);
+        } catch (emailErr) {
+            console.error('Erro ao enviar email de moderação:', emailErr?.message || emailErr);
+        }
 
         res.json(buildReportResponse(reportWithUser, { includeReporterContact: true }));
     } catch (err) {
