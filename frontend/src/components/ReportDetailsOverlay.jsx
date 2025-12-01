@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { FaThumbsUp, FaThumbsDown, FaTimes, FaMapMarkerAlt, FaWater, FaTrashAlt, FaTree, FaRoad, FaImage } from 'react-icons/fa';
 import { CgMoreVertical } from "react-icons/cg";
 import reportService from '../services/reportService';
+import api from '../services/api';
 import { getStatusLabel } from '../utils/reportStatus';
 import instagramIcon from '../assets/instagram.svg';
 import facebookIcon from '../assets/facebook.png';
@@ -221,8 +222,55 @@ const ReportDetailsOverlay = ({ report, currentUser, onClose }) => {
             }
         };
 
+        const downloadReportImage = async () => {
+            try {
+                if (!activeReport || !activeReport.id) return false;
+
+                // Preferir usar o proxy do backend para evitar problemas de CORS
+                const response = await api.get(`/reports/${activeReport.id}/image-proxy`, {
+                    responseType: 'blob',
+                });
+                const blob = response.data;
+                if (!blob) return false;
+
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                const mime = blob.type || 'image/jpeg';
+                const ext = mime.split('/')[1] ? mime.split('/')[1].split(';')[0] : 'jpg';
+                a.href = url;
+                a.download = `denuncia-${activeReport.id}.${ext}`;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                URL.revokeObjectURL(url);
+                return true;
+            } catch (err) {
+                console.error('Erro ao baixar imagem do report:', err);
+                return false;
+            }
+        };
+
         const copied = await copyCaption();
-        const notice = copied ? 'Legenda copiada.' : 'Copie a legenda antes de compartilhar.';
+
+        // Tentar baixar a imagem associada (não bloqueia o fluxo principal)
+        let downloaded = false;
+        try {
+            downloaded = await downloadReportImage();
+        } catch (e) {
+            downloaded = false;
+        }
+
+        let notice;
+        if (copied && downloaded) {
+            notice = 'Legenda criada e imagem baixada!';
+        } else if (copied && !downloaded) {
+            notice = 'Legenda criada. Não foi possível baixar a imagem.';
+        } else if (!copied && downloaded) {
+            notice = 'Imagem baixada! Copie a legenda manualmente.';
+        } else {
+            notice = 'Copie a legenda antes de compartilhar.';
+        }
+
         setShareNotice(notice);
         setTimeout(() => setShareNotice(''), 6000);
 
