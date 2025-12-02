@@ -20,6 +20,8 @@
   overflow: hidden;
   animation: slideUp 0.4s ease-out;
   box-sizing: border-box;
+  position: relative;
+  z-index: 10;
 }
 
 @keyframes slideUp {
@@ -39,6 +41,7 @@
   padding: 2rem 1.5rem;
   text-align: center;
   color: white;
+  box-sizing: border-box;
 }
 
 .profile-avatar {
@@ -71,6 +74,7 @@
 
 .profile-form {
   padding: 1.5rem;
+  box-sizing: border-box;
 }
 
 .form-group {
@@ -190,20 +194,23 @@
   border: 1px solid #f5c6cb;
 }
 
-@media (max-width: 480px) {
+@media (max-width: 900px) {
   .profile-page-container {
-    padding: 4.5rem 0.8rem 0.8rem;
+    padding: 8.5rem 0.1rem 0.1rem;
     min-height: 100vh;
     overflow-x: hidden;
     width: 100%;
+    box-sizing: content-box;
   }
 
   .profile-card {
-    max-width: 100%;
+    margin-top: 5rem;
+    box-sizing: content-box;
+    width: calc(100% - 5rem);
   }
 
   .profile-header {
-    padding: 1.5rem 1.2rem;
+    padding: 1.2rem 1rem;
   }
 
   .profile-avatar {
@@ -223,7 +230,7 @@
   }
 
   .profile-form {
-    padding: 1.2rem;
+    padding: 1rem;
   }
 
   .form-group {

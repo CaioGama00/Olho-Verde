@@ -14,21 +14,30 @@
 }
 
 body {
-  font-family: 'Outfit', 'Inter', sans-serif;
+  font-family: "Outfit", "Inter", sans-serif;
   margin: 0;
   background-color: var(--light-gray);
   color: var(--text-color);
   -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+  width: 100%;
+  max-width: 100%;
 }
 
 .app-container {
   display: flex;
   flex-direction: column;
   height: 100vh;
+  overflow-x: hidden;
+  width: 100%;
 }
 
 .app-header {
-  background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+  background: linear-gradient(
+    90deg,
+    var(--primary-color),
+    var(--secondary-color)
+  );
   color: var(--white);
   padding: 0.75rem 2rem;
   display: flex;
@@ -77,7 +86,7 @@ body {
   margin: 0;
   font-size: 1.6rem;
   color: var(--white);
-  font-family: 'Inter', sans-serif;
+  font-family: "Inter", sans-serif;
   font-weight: 700;
 }
 
@@ -133,7 +142,8 @@ nav button {
   font-weight: 600;
   padding: 0.55rem 1.1rem;
   border-radius: 999px;
-  transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.25s ease, filter 0.25s ease;
+  transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.25s ease,
+    filter 0.25s ease;
   position: relative;
   overflow: hidden;
   transform-origin: center;
@@ -143,10 +153,14 @@ nav button {
 
 nav a::after,
 nav button::after {
-  content: '';
+  content: "";
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.28), transparent 50%);
+  background: radial-gradient(
+    circle at 20% 20%,
+    rgba(255, 255, 255, 0.28),
+    transparent 50%
+  );
   transform: translateX(-120%);
   transition: transform 0.4s ease;
 }
@@ -198,21 +212,23 @@ nav div {
 }
 
 .user-chip::before {
-  content: '👤';
+  content: "👤";
   font-size: 0.9rem;
 }
 
 .user-chip::after {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: -100%;
   width: 50%;
   height: 100%;
-  background: linear-gradient(120deg,
-      transparent,
-      rgba(255, 255, 255, 0.6),
-      transparent);
+  background: linear-gradient(
+    120deg,
+    transparent,
+    rgba(255, 255, 255, 0.6),
+    transparent
+  );
   transform: skewX(-25deg);
   transition: 0.5s;
 }
@@ -305,7 +321,11 @@ nav div {
   width: 44px;
   height: 44px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(109, 237, 173, 0.4) 0%, rgba(33, 150, 243, 0) 70%);
+  background: radial-gradient(
+    circle,
+    rgba(109, 237, 173, 0.4) 0%,
+    rgba(33, 150, 243, 0) 70%
+  );
   animation: target-pulse 2s ease-out infinite;
 }
 
@@ -339,8 +359,14 @@ nav div {
   width: 26px;
   height: 26px;
   border-radius: 50%;
-  background: radial-gradient(circle at 30% 30%, #e3fff5, #21c7a8 60%, #1485e0 100%);
-  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.9), 0 10px 18px rgba(0, 0, 0, 0.26);
+  background: radial-gradient(
+    circle at 30% 30%,
+    #e3fff5,
+    #21c7a8 60%,
+    #1485e0 100%
+  );
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.9),
+    0 10px 18px rgba(0, 0, 0, 0.26);
 }
 
 @keyframes drop-in {
@@ -787,7 +813,7 @@ nav div {
   width: 320px;
   max-height: calc(100vh - 140px); /* Evita que ultrapasse o topo */
   overflow-y: auto;
-  
+
   /* Estilo Glassmorphism */
   background: var(--glass-bg);
   border-radius: 16px;
@@ -849,7 +875,11 @@ nav div {
 }
 
 .filter-chip.active {
-  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+  background: linear-gradient(
+    135deg,
+    var(--primary-color),
+    var(--secondary-color)
+  );
   color: white;
   box-shadow: 0 4px 10px rgba(46, 204, 113, 0.3);
   border-color: transparent;
@@ -887,6 +917,7 @@ nav div {
     flex-direction: column;
     gap: 0.5rem;
     text-align: center;
+    padding: 0.75rem 1rem;
   }
 
   .app-logo-container {
@@ -895,6 +926,20 @@ nav div {
 
   nav {
     justify-content: center;
+    flex-wrap: wrap;
+    width: 100%;
+  }
+
+  nav a,
+  nav button {
+    font-size: 0.75rem;
+    padding: 0.4rem 0.8rem;
+  }
+
+  nav div {
+    width: 100%;
+    justify-content: center;
+    flex-wrap: wrap;
   }
 
   .logo-button h1 {
@@ -922,7 +967,7 @@ nav div {
     border-radius: 24px 24px 0 0; /* Arredondado apenas no topo */
     padding: 1.5rem;
     padding-bottom: calc(1.5rem + env(safe-area-inset-bottom));
-    
+
     /* Animação vindo de baixo */
     transform-origin: bottom center;
     transform: translateY(100%);
@@ -931,7 +976,7 @@ nav div {
   .filter-panel.visible {
     transform: translateY(0);
   }
-  
+
   /* Ajuste para os botões não ficarem por baixo do painel quando aberto */
   .filter-panel.visible ~ .recenter-button,
   .filter-panel.visible ~ .filter-button {
