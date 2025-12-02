@@ -10,6 +10,54 @@
   color: #1f2a1f;
 }
 
+@media (max-width: 900px) {
+  .admin-dashboard {
+    padding: 1rem 0.5rem;
+    margin: 12rem 0.5rem 0.5rem;
+    max-height: none;
+    overflow-x: hidden;
+    width: calc(100% - 1rem);
+    box-sizing: content-box;
+  }
+
+  .admin-dashboard h2 {
+    font-size: 1.2rem;
+  }
+
+  .admin-dashboard .subtitle {
+    font-size: 0.75rem;
+  }
+
+  .admin-dashboard header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .admin-grid {
+    gap: 1rem;
+  }
+
+  .status-filter {
+    flex-direction: column;
+  }
+
+  .status-filter button {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
+    width: 100%;
+  }
+
+  .report-table {
+    font-size: 0.75rem;
+  }
+
+  .report-table th,
+  .report-table td {
+    padding: 0.4rem 0.5rem;
+  }
+}
+
 @media (max-width: 768px) {
   .admin-dashboard {
     margin: 5rem 1rem 2rem;
