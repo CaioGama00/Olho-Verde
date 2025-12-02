@@ -11,6 +11,42 @@
   gap: 15px;
 }
 
+.filter-bar-content {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.filter-bar-content h3 {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #666;
+}
+
+.filter-section {
+  margin-bottom: 0.75rem;
+  width: 100%;
+}
+
+.filter-section:last-child {
+  margin-bottom: 0;
+}
+
+.category-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  width: 100%;
+}
+
+.status-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  width: 100%;
+}
+
 .filter-group {
   display: flex;
   flex-direction: column;
@@ -28,4 +64,29 @@
   border-radius: 4px;
   border: 1px solid #ddd;
   min-width: 150px;
+}
+
+@media (max-width: 768px) {
+  .filter-bar-content {
+    width: 100%;
+  }
+
+  .filter-section h3 {
+    font-size: 0.8rem;
+    margin-bottom: 0.4rem;
+  }
+
+  .category-filters {
+    gap: 0.35rem;
+  }
+
+  .filter-chip {
+    padding: 0.4rem 0.6rem;
+    font-size: 0.8rem;
+  }
+
+  .status-chip-button {
+    padding: 0.5rem 0.6rem;
+    font-size: 0.85rem;
+  }
 }
