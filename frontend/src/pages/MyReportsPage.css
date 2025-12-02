@@ -272,3 +272,44 @@
   border-radius: 8px;
   margin-bottom: 1.5rem;
 }
+
+@media (max-width: 900px) {
+  .my-reports-page {
+    padding: 2rem 0.5rem;
+    margin: 12rem 0.5rem 0.5rem;
+    max-height: none;
+    overflow-x: hidden;
+    width: calc(100% - 1rem);
+    box-sizing: content-box;
+  }
+
+  .my-reports-page h1 {
+    font-size: 1.4rem;
+  }
+
+  .my-reports-page .subtitle {
+    font-size: 0.8rem;
+  }
+
+  .filters-row {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .filter-field {
+    min-width: auto;
+    flex: 1 1 100%;
+  }
+
+  .filter-field input,
+  .filter-field select {
+    font-size: 0.85rem;
+    padding: 0.4rem 0.5rem;
+  }
+
+  .clear-button {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
+    width: 100%;
+  }
+}
