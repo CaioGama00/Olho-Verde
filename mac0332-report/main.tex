@@ -62,7 +62,96 @@ lorem ipsum
 
 \section{Relatório de refatorações realizadas}
 
-lorem ipsum
+Durante o desenvolvimento do projeto, uma das principais refatorações realizadas foi a reestruturação completa da camada de backend, que inicialmente estava implementada em um único arquivo monolítico (\texttt{server.js}) contendo toda a lógica da aplicação.
+
+\subsection{Motivação}
+
+O arquivo \texttt{server.js} original concentrava diversos componentes em um único local, incluindo definição de rotas HTTP, lógica de negócio, controladores, configurações do servidor e middlewares. Essa abordagem monolítica apresentava diversos problemas:
+
+\begin{itemize}
+    \item \textbf{Baixa manutenibilidade:} dificuldade em localizar e modificar funcionalidades específicas
+    \item \textbf{Violação de princípios SOLID:} um único arquivo com múltiplas responsabilidades
+    \item \textbf{Difícil testabilidade:} componentes fortemente acoplados
+    \item \textbf{Escalabilidade comprometida:} crescimento desordenado do código
+\end{itemize}
+
+\subsection{Solução Implementada: Arquitetura MVC}
+
+Para resolver esses problemas, foi implementada uma arquitetura baseada no padrão \textbf{MVC (Model-View-Controller)}, separando as responsabilidades em camadas bem definidas:
+
+\vspace{0.3cm}
+
+\begin{itemize}
+
+\item \noindent\textbf{Controllers:} 
+
+Camada responsável por receber as requisições HTTP, validar os dados de entrada, coordenar as chamadas aos services apropriados e retornar as respostas formatadas ao cliente. Os controllers atuam como intermediários entre as rotas e a lógica de negócio, mantendo o código de orquestração isolado e reutilizável.
+
+\vspace{0.2cm}
+
+\item \noindent\textbf{Services:} 
+
+Camada que contém toda a lógica de negócio da aplicação. Os services são responsáveis por implementar as regras de negócio, processar dados, realizar validações complexas e orquestrar operações que envolvem múltiplas entidades. Esta camada é independente do protocolo HTTP, permitindo que a mesma lógica seja reutilizada em diferentes contextos.
+
+\vspace{0.2cm}
+
+\item \noindent\textbf{Routes:} 
+
+Camada que define os endpoints da API e mapeia cada rota HTTP para o controller correspondente. Essa separação permite uma visão clara de todos os endpoints disponíveis na aplicação e facilita a documentação e manutenção das rotas.
+
+\vspace{0.2cm}
+
+\item \noindent\textbf{Models:} 
+
+Camada que representa as entidades de dados e define a estrutura e o comportamento dos objetos de domínio. Os models são responsáveis pela interação com o banco de dados, definindo schemas, validações e métodos de acesso aos dados.
+
+\end{itemize}
+
+\subsection{Estrutura Resultante}
+
+A nova estrutura de diretórios do backend ficou organizada da seguinte forma:
+
+\vspace{0.3cm}
+
+\begin{center}
+\begin{minipage}{0.45\textwidth}
+\begin{verbatim}
+backend/
+├── server.js              
+├── controllers/          
+│   ├── reportController.js
+│   ├── userController.js
+│   └── ...
+├── services/             
+│   ├── reportService.js
+│   ├── userService.js
+│   └── ...
+├── routes/               
+│   ├── reportRoutes.js
+│   ├── userRoutes.js
+│   └── ...
+└── models/               
+    └── ...
+\end{verbatim}
+\end{minipage}
+\end{center}
+
+\subsection{Benefícios Obtidos}
+
+A refatoração trouxe melhorias significativas para o projeto:
+
+\begin{itemize}
+    \item \textbf{Modularização:} cada módulo possui uma responsabilidade clara e bem definida
+    \item \textbf{Manutenibilidade:} facilidade em localizar e modificar funcionalidades específicas
+    \item \textbf{Reusabilidade:} services podem ser compartilhados entre diferentes controllers
+    \item \textbf{Testabilidade:} componentes isolados facilitam a criação de testes unitários
+    \item \textbf{Colaboração:} múltiplos desenvolvedores podem trabalhar simultaneamente
+    \item \textbf{Escalabilidade:} novas funcionalidades podem ser adicionadas sem comprometer a organização
+\end{itemize}
+
+\vspace{0.3cm}
+
+\noindent Esta refatoração representa um marco importante na evolução do projeto, estabelecendo uma base sólida e profissional para o desenvolvimento futuro da plataforma Olho Verde.
 
 \section{Apresentação final com demonstração ao vivo da solução}
 
