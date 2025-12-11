@@ -45,7 +45,77 @@ O presente relatório irá descrever as atividades realizadas no desenvolvimento
 
 \section{Arquitetura de software completa}
 
-lorem ipsum
+Este capítulo descreve a arquitetura do sistema Olho-Verde, detalhando as tecnologias utilizadas, os componentes principais e o fluxo de dados entre eles.
+
+\subsection{Visão Geral}
+
+O sistema Olho-Verde segue uma arquitetura cliente-servidor tradicional, estruturada em camadas. O \textbf{Frontend} é uma \textit{Single Page Application} (SPA) que se comunica com o \textbf{Backend} através de uma API RESTful. O Backend, por sua vez, gerencia a lógica de negócios e interage com o banco de dados PostgreSQL, gerenciado pela plataforma Supabase.
+
+A separação clara entre cliente e servidor permite o desenvolvimento independente das interfaces e da lógica de negócios, além de facilitar a escalabilidade e manutenção do sistema.
+
+\subsection{Tecnologias Utilizadas}
+
+\subsubsection{Frontend}
+\begin{itemize}
+    \item \textbf{React (v19):} Biblioteca principal para construção da interface do usuário.
+    \item \textbf{Vite:} Ferramenta de \textit{build} e servidor de desenvolvimento, garantindo alta performance.
+    \item \textbf{Leaflet \& React-Leaflet:} Para renderização e manipulação de mapas interativos.
+    \item \textbf{Axios:} Cliente HTTP para realizar requisições à API.
+    \item \textbf{CSS Modules/Vanilla CSS:} Estilização dos componentes.
+\end{itemize}
+
+\subsubsection{Backend}
+\begin{itemize}
+    \item \textbf{Node.js:} Ambiente de execução JavaScript no servidor.
+    \item \textbf{Express:} Framework web para construção da API REST.
+    \item \textbf{Supabase Client (@supabase/supabase-js):} Biblioteca para interação com o banco de dados e serviços do Supabase.
+    \item \textbf{JWT (JSON Web Tokens):} Mecanismo utilizado para autenticação e autorização segura.
+\end{itemize}
+
+\subsubsection{Banco de Dados}
+\begin{itemize}
+    \item \textbf{PostgreSQL:} Banco de dados relacional robusto, hospedado e gerenciado pelo Supabase.
+\end{itemize}
+
+\subsection{Diagrama de Containers (C4 Model)}
+
+O diagrama a seguir ilustra os principais containers do sistema e suas responsabilidades. O usuário interage com a Aplicação Web, que consome a API do Backend. O Backend processa as requisições e persiste os dados no Banco de Dados.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{images/c4_container.png}
+    \caption{Diagrama de Containers - Sistema Olho-Verde}
+    \label{fig:c4_container}
+\end{figure}
+
+\subsection{Arquitetura do Backend}
+
+O backend está organizado em camadas para separar responsabilidades, facilitando testes e manutenção:
+
+\begin{enumerate}
+    \item \textbf{Routes (Rotas):} Definem os \textit{endpoints} da API e direcionam as requisições para os controladores.
+    \item \textbf{Controllers (Controladores):} Recebem a requisição, validam parâmetros e chamam os serviços.
+    \item \textbf{Services (Serviços):} Contêm a lógica de negócio principal.
+    \item \textbf{Data Access (Supabase):} Interação direta com o banco de dados.
+\end{enumerate}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{images/backend_architecture.png}
+    \caption{Arquitetura em Camadas do Backend}
+    \label{fig:backend_arch}
+\end{figure}
+
+\subsection{Fluxo de Autenticação}
+
+O sistema utiliza tokens JWT para autenticação. O diagrama de sequência abaixo ilustra o processo de login e uso de token para acessar recursos protegidos.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{images/auth_sequence.png}
+    \caption{Diagrama de Sequência de Autenticação}
+    \label{fig:auth_sequence}
+\end{figure}
 
 \section{Solução completa}
 
