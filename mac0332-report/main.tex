@@ -69,7 +69,7 @@ A separação clara entre cliente e servidor permite o desenvolvimento independe
     \item \textbf{Node.js:} Ambiente de execução JavaScript no servidor.
     \item \textbf{Express:} Framework web para construção da API REST.
     \item \textbf{Supabase Client (@supabase/supabase-js):} Biblioteca para interação com o banco de dados e serviços do Supabase.
-    \item \textbf{JWT (JSON Web Tokens):} Mecanismo utilizado para autenticação e autorização segura.
+    \item \textbf{Supabase Auth:} Serviço gerenciado de autenticação e gestão de usuários, baseado em JWT.
 \end{itemize}
 
 \subsubsection{Banco de Dados}
@@ -90,13 +90,13 @@ O diagrama a seguir ilustra os principais containers do sistema e suas responsab
 
 \subsection{Arquitetura do Backend}
 
-O backend está organizado em camadas para separar responsabilidades, facilitando testes e manutenção:
+O backend está organizado com foco em pragmatismo e separação de lógica complexa:
 
 \begin{enumerate}
     \item \textbf{Routes (Rotas):} Definem os \textit{endpoints} da API e direcionam as requisições para os controladores.
-    \item \textbf{Controllers (Controladores):} Recebem a requisição, validam parâmetros e chamam os serviços.
-    \item \textbf{Services (Serviços):} Contêm a lógica de negócio principal.
-    \item \textbf{Data Access (Supabase):} Interação direta com o banco de dados.
+    \item \textbf{Controllers (Controladores):} Processam as requisições, realizam validações e interagem diretamente com o Supabase para operações de dados padrão.
+    \item \textbf{Services (Serviços):} Encapsulam lógicas de negócio específicas e reutilizáveis, como upload de arquivos e envio de emails.
+    \item \textbf{Data Access (Supabase):} O cliente Supabase atua como camada de acesso a dados (ORM/DAO).
 \end{enumerate}
 
 \begin{figure}[H]
@@ -108,7 +108,7 @@ O backend está organizado em camadas para separar responsabilidades, facilitand
 
 \subsection{Fluxo de Autenticação}
 
-O sistema utiliza tokens JWT para autenticação. O diagrama de sequência abaixo ilustra o processo de login e uso de token para acessar recursos protegidos.
+O sistema utiliza o serviço \textbf{Supabase Auth} para autenticação de usuários. O gerenciamento de sessão é realizado através de tokens JWT (JSON Web Tokens), emitidos pelo Supabase e validados pelo Backend em cada requisição protegida. O diagrama de sequência abaixo ilustra o processo.
 
 \begin{figure}[H]
     \centering
