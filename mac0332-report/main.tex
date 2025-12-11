@@ -318,10 +318,33 @@ lorem ipsum
 
 \subsection{Desafios superados}
 
-lorem ipsum
+Superamos vários desafios ao longo do projeto tanto no backend quanto no frontend. 
+
+A integração com APIs externas (OpenStreetMap para mapas, HuggingFace para classificação e Supabase para banco/armazenamento) exigiu desenhar camadas de abstração, variáveis de ambiente bem documentadas e mecanismos de fallback para casos de falha ou latência.
+
+Para o problema de CORS e distribuição de imagens implementamos um endpoint image-proxy que garante entrega segura das imagens para o frontend e evita exposições diretas de URLs. 
+
+A classificação automática de imagens usando modelos gratuitos do Hugging Face apresentou baixa acurácia. Para mitigar esse problema, implementamos uma página administrativa que permite a revisão e aprovação/reprovação manual de reports por usuários autorizados, garantindo maior confiabilidade dos dados publicados.
+
+Em segurança, desenvolvemos autenticação baseada em JWT, tratamento de tokens expirados e fluxo de recuperação de senha por e-mail com links seguros. 
+
+Para garantir qualidade, foi construída uma suite de testes abrangente (controladores, serviços, middleware e utilitários) com mocks das integrações externas. 
+
+Dados esses desafios, as principais conquistas do projeto são:
+
+\begin{itemize}
+    \item \textbf{Integração confiável com Supabase e OpenStreetMap:} implementamos camadas de abstração, configuração via variáveis de ambiente e tratamento de erros para garantir operações robustas com o banco/armazenamento e os serviços de mapas.
+    \item \textbf{Endpoint \texttt{image-proxy} e validações de upload:} criamos um endpoint proxy para mitigar problemas de CORS, adicionamos validações de tipo e tamanho de arquivo e padronizamos o armazenamento seguro em Supabase Storage.
+    \item \textbf{Middleware de autenticação e permissões administrativas:} implementamos autenticação baseada em JWT, verificação de privilégios de administrador e rotas protegidas para ações críticas de moderação e auditoria.
+    \item \textbf{Suite de testes automatizados e documentação de variáveis de ambiente:} utilizamos Jest para testes de controladores, serviços, middleware e utilitários, além de documentar variáveis essenciais.
+\end{itemize}
 
 \subsection{Futuras melhorias}
 
-lorem ipsum
+A próxima etapa do projeto contempla a adoção de uma solução de classificação de imagens mais robusta, seja por meio da utilização de modelos pagos disponíveis no Hugging Face com endpoints privados e suporte a fine-tuning, seja por meio de IAs multimodais comerciais com capacidade vision+language. A migração para modelos de maior qualidade permitirá aumentar a acurácia das predições, reduzir a necessidade de intervenção manual e processar dados em escala com níveis de serviço mais previsíveis. 
+
+Para ampliar o engajamento dos usuários e melhorar a qualidade dos dados coletados, propõe-se a implementação de um sistema de gamificação dos reports. Nesse sistema, usuários que submeterem denúncias confirmadas por moderadores ou que contribuírem com comentários de alta qualidade receberão pontos, distintivos e níveis de reputação. Esses méritos poderão ser convertidos em privilégios, por exemplo, maior peso em validações, acesso antecipado a filas de moderação ou reconhecimentos públicos nos dashboards, ao mesmo tempo em que mecanismos de rate‑limiting, validações automáticas e auditorias por amostragem evitarão abusos e garantirão a integridade das recompensas.
+
+A sustentabilidade do projeto também depende da construção de uma comunidade ativa de colaboradores e curadores. Para isso, propomos a criação de um painel dedicado a moderadores, documentação de onboarding, treinamentos periódicos e canais de comunicação (ex.: Discord/Slack) para coordenação local. A comunidade terá papel central revisão e organização de campanhas regionais em parceria com associações de bairro, ONGs e órgãos governamentais.
 
 \end{document}
