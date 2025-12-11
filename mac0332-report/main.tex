@@ -15,6 +15,7 @@
 \usepackage{subcaption}
 \usepackage[export]{adjustbox}
 \usepackage[colorlinks=true, allcolors=blue]{hyperref}
+\usepackage{pmboxdraw}
 
 \newcommand{\mycomment}[1]{}
 
@@ -54,11 +55,91 @@ lorem ipsum
 
 \section{Plano de testes para as funcionalidades desenvolvidas}
 
-lorem ipsum
+O objetivo do plano de testes é garantir a qualidade e a confiabilidade do backend da plataforma Olho Verde. O foco principal é alcançar uma cobertura mínima de 80\% das funções de cada módulo do código, assegurando que as funcionalidades críticas sejam validadas de forma abrangente. Os testes deverão ser organizados para validar cenários de sucesso, erro e casos extremos.
+
+\subsection{Testes de Serviços}
+
+O serviço de armazenamento deverá ser validado quanto ao upload de imagens para o armazenamento cloud, a validação de formatos e tamanhos de arquivos, e o tratamento de erros relacionados a falhas de rede e arquivos inválidos.
+
+O serviço de classificação deverá ser validado quanto à classificação de imagens por buffer, à correspondência de palavras-chave com as categorias de problemas urbanos, e à aplicação de thresholds de categoria. Deverão ser considerados comportamentos com combinações variadas de predições, tratamento de falhas de API externa e respostas inválidas.
+
+\subsection{Testes de Middleware}
+
+O middleware de autenticação deverá ser validado quanto à verificação de tokens JWT, à detecção da função de administrador, e ao controle de autorização. Deverão ser testados cenários com tokens válidos, tokens expirados, permissões de administrador e permissões de usuários comuns.
+
+\subsection{Testes de Utilitários}
+
+Os utilitários de resposta deverão ser validados quanto à construção de respostas de denúncia, aos cálculos de votos, e à preservação de dados de timestamp. Devem-se considerar a estrutura correta dos dados retornados e a contagem adequada de votos.
+
+Os utilitários de perfil de usuário deverão ser validados quanto à extração de perfis a partir de dados brutos, à busca de perfis por identificadores, e à sincronização de dados entre diferentes fontes. Deverão ser considerados o tratamento de dados ausentes, a deduplicação de identificadores, a tolerância a falhas de conexão, e o mapeamento correto dos resultados.
+
+\subsection{Testes de Controladores}
+
+O controlador de autenticação deverá ser validado quanto ao registro de novos usuários, ao login com geração de tokens, à atualização de perfil, à redefinição de senha e à confirmação de redefinição de senha. Deverão ser considerados a validação de entrada, a prevenção de usuários duplicados, o tratamento de credenciais inválidas, a recuperação de conta, a sincronização de perfil com serviços externos, e o tratamento de erros de rede.
+
+O controlador de classificação deverá ser validado quanto ao fluxo completo de classificação de imagem, à validação de categorias, e ao tratamento apropriado de erros. Deverão ser considerados a correspondência correta de categorias, o tratamento de erros de API externa, a validação de chaves de API, a estrutura completa da resposta de dados, a propagação correta de dados de erro, e a compatibilidade com tipos variados de arquivo.
+
+O controlador de denúncia deverá ser validado quanto à criação de denúncias com e sem imagens, às operações de voto positivo e negativo, ao gerenciamento de comentários, e à filtragem de denúncias.
+
+O controlador de administração deverá ser validado quanto à moderação de denúncias, ao gerenciamento de status de denúncias, ao bloqueio de usuários, e à listagem administrativa de dados. Deverão ser considerados a aprovação e rejeição de denúncias, a atualização de status, e o gerenciamento de usuários.
+
+\subsection{Cenários de Teste}
+
+O tratamento de erros deverá ser validado através de casos como validação de entrada inválida, falhas de banco de dados, timeouts de API e validação de dados ausentes.
+
+Os casos extremos deverão ser testados para validar o comportamento com valores nulo ou indefinido, strings vazias, identificadores e formatos inválidos, e campos opcionais ausentes.
+
+A autenticação e autorização deverão ser validadas quanto à verificação de tokens, à confirmação de função de administrador, à verificação de permissões, e ao gerenciamento de sessões.
+
+A integridade de dados deverá ser validada quanto aos cálculos de votos, à preservação de associações de usuário, à manutenção de timestamps, e à correspondência de categorias.
 
 \section{Relatório dos testes já realizados}
 
-lorem ipsum
+A suite de testes foi executada com sucesso em toda a aplicação. Um total de 159 testes foram aprovados, cobrindo controladores, serviços, middleware e utilitários. A cobertura total de funções atingiu 89,58\%, superando o objetivo mínimo de 80\%. A cobertura total de declarações alcançou 76,09\%, com foco especial em cobertura de declarações apenas para o controlador de classificação, onde se atingiu 85,29\%.
+
+\subsection{Testes de Serviços}
+
+\subsubsection{storageService}
+
+O serviço de armazenamento foi testado em 6 casos. Foram testadas: retorno nulo quando arquivo não é fornecido, upload de arquivo com retorno de fileId e publicUrl, tratamento de arquivo sem extensão, uso de "anon" quando userId não é fornecido, lançamento de erro quando upload falha, e tratamento gracioso quando publicUrl está ausente. A cobertura de declarações atingiu 100\% e a cobertura de funções atingiu 100\%.
+
+\subsubsection{classificationService}
+
+O serviço de classificação foi testado em 13 casos. Foram testadas: classificação bem-sucedida com correspondência exata de categoria, classificação sem categoria esperada, retorno nulo quando nenhuma predição atende ao threshold, respeito a thresholds específicos de categoria, envio correto de headers para API, uso de mimetype padrão quando não fornecido, tratamento de resposta não-array da API, tratamento de array vazio de predições, tratamento de erro em requisição axios, preservação de dados de erro em exceção lançada, tratamento de predições com scores ausentes, e uso de threshold padrão quando categoria não tem threshold. A cobertura de declarações atingiu 89,65\% e a cobertura de funções atingiu 100\%.
+
+\subsection{Testes de Middleware}
+
+\subsubsection{auth}
+
+O middleware de autenticação foi testado em 16 casos. Foram testadas: retorno true quando usuário tem flag de administrador em user\_metadata, retorno true quando usuário tem role de administrador em user\_metadata, retorno true quando email do usuário está em ADMIN\_EMAILS, retorno false quando usuário não é administrador, retorno false quando usuário é nulo, tratamento de array de roles, comparação case-insensitive para role, retorno nulo sem header de autorização, extração de token de header Bearer, retorno nulo com token inválido, retorno 401 sem token fornecido, definição de usuário em requisição com token válido, definição correta de flag isAdmin, retorno 401 com token inválido, definição de usuário como nulo quando getUser retorna null, e retorno 403 quando usuário não é administrador em rota protegida. A cobertura de declarações atingiu 100\% e a cobertura de funções atingiu 100\%.
+
+\subsection{Testes de Utilitários}
+
+\subsubsection{reportHelpers}
+
+O utilitário de resposta de denúncia foi testado em 8 casos. Foram testadas: construção de resposta com todos os campos obrigatórios, tratamento de denúncias com votos zerados, inclusão de URL de imagem quando disponível, tratamento de URL de imagem ausente, preservação de timestamps, tratamento de vários tipos de problema, inclusão de user\_id, e manutenção de status de moderação. A cobertura de declarações atingiu 70\% e a cobertura de funções atingiu 100\%.
+
+\subsubsection{userProfile}
+
+O utilitário de perfil de usuário foi testado em 22 casos. Foram testadas: retorno de valores nulos quando usuário é nulo, retorno de valores nulos quando usuário é indefinido, extração de nome e email de propriedades diretas do objeto usuário, extração de nome e email de raw\_user\_meta\_data, extração de nome e email de user\_metadata, priorização de propriedades diretas sobre metadata, priorização de raw\_user\_meta\_data sobre user\_metadata, retorno nulo para nome e email ausentes, tratamento de extração parcial de dados, tratamento de objetos metadata vazios, retorno de map vazio quando array de IDs de usuário está vazio, retorno de map vazio quando userIds é indefinido, deduplicação de IDs de usuário antes de fetch, fetch de perfis para múltiplos IDs únicos, filtragem de valores falsy de userIds, retorno nulo para usuário quando API retorna erro, retorno nulo para usuário quando API lança exceção, tratamento de resultados mistos de sucesso e falha, tratamento de objeto usuário sem propriedade user em data, estrutura correta do map retornado, e tratamento de array grande de IDs de usuário. A cobertura de declarações atingiu 100\% e a cobertura de funções atingiu 100\%.
+
+\subsection{Testes de Controladores}
+
+\subsubsection{authController}
+
+O controlador de autenticação foi testado em 28 casos. Foram testadas: registro bem-sucedido de novo usuário, retorno de erro quando email já existe, tratamento de erro supabase, login bem-sucedido de usuário, retorno de erro com credenciais inválidas, tratamento de erro supabase em login, retorno de erro sem email, retorno de erro sem password, atualização bem-sucedida de perfil, retorno de erro quando tentativa de atualização falha, retorno de erro sem ID de usuário em atualização, requisição bem-sucedida de reset de senha, retorno de erro quando email não existe em requisição de reset, tratamento de erro supabase em requisição de reset, confirmação bem-sucedida de reset de senha, retorno de erro com token de reset inválido, tratamento de erro supabase em confirmação de reset, validação de força de password (requisitos específicos), sugestões de mensagem de erro para password fraco, verificação de sincronização de perfil com serviços externos, tratamento de timeout de API em registro, tratamento de timeout de API em login, tratamento de timeout de API em atualização, retorno de erro quando password é identicamente igual ao anterior, sincronização correta de dados de usuário entre serviços, tratamento de identidades duplicadas, e tratamento de erro de conexão em requisições. A cobertura de declarações atingiu 85,89\% e a cobertura de funções atingiu 83,33\%.
+
+\subsubsection{classificationController}
+
+O controlador de classificação foi testado em 33 casos. Foram testadas: retorno de erro quando nenhuma imagem é fornecida, classificação bem-sucedida de imagem com categoria correspondente, retorno de erro quando nenhuma correspondência é encontrada, retorno de erro quando categoria detectada difere da esperada, tratamento de erro de serviço de classificação, tratamento de erro de chave de API inválida, retorno correto de estrutura de resposta de sucesso, retorno correto de estrutura de resposta de erro, inclusão de predição superior em resposta de sucesso, inclusão de predição superior em resposta de erro, retorno de erro com status 503 quando serviço não disponível, retorno de erro com mensagem apropriada para erro genérico de classificação, propagação de erro de timeout, ajuste de status de resposta para 422 em validação falha, ajuste de status de resposta para 503 em indisponibilidade de serviço, validação de requisição bem-formada à API de classificação, tratamento de resposta vazia da API, tratamento de array de predições vazio, tratamento de predição sem score, suporte a vários formatos de imagem (JPEG, PNG, GIF, WebP), validação de mimetype de arquivo, rejeição de arquivo não-imagem, rejeição de arquivo muito grande, rejeição de arquivo muito pequeno, verificação de log de erro em falha, verificação de log de sucesso em classificação bem-sucedida, tratamento de erro de classificação com API sobrecarregada, tratamento de erro de classificação com API em manutenção, tratamento de erro de classificação com conexão de rede instável, retorno de resposta estruturada mesmo com predições parciais, inclusão de confiança em resposta, e tratamento de erro supabase em cenário de integração completa. A cobertura de declarações atingiu 85,29\% e a cobertura de funções atingiu 66,66\%.
+
+\subsubsection{reportController}
+
+O controlador de denúncia foi testado em 17 casos. Foram testadas: retorno de todas as denúncias aprovadas, inclusão de votos de usuário quando autenticado, filtro por categoria de problema, filtro por status de denúncia, ordenação de denúncias por data, criação bem-sucedida de denúncia com imagem, criação bem-sucedida de denúncia sem imagem, retorno de erro quando problema não é fornecido, retorno de erro quando dados de localização não são fornecidos, voto positivo em denúncia, voto negativo em denúncia, prevenção de voto duplicado, retorno de erro ao tentar votar em denúncia inexistente, adição bem-sucedida de comentário, retorno de erro quando comentário está vazio, obtenção de comentários de denúncia, e filtro de denúncias por intervalo de datas. A cobertura de declarações atingiu 59,34\% e a cobertura de funções atingiu 81,81\%.
+
+\subsubsection{adminController}
+
+O controlador de administração foi testado em 16 casos. Foram testadas: retorno de todas as denúncias, tratamento de erro de banco de dados na listagem, atualização bem-sucedida de status de denúncia, validação de status válido em atualização, retorno de erro com status inválido, aprovação de denúncia pendente, rejeição de denúncia pendente, bloqueio bem-sucedido de usuário, desbloqueio bem-sucedido de usuário, listagem de usuários bloqueados, retorno de erro ao tentar bloquear usuário inexistente, retorno de erro ao tentar bloquear sem permissão, inclusão de detalhes de usuário em resposta, inclusão de histórico de moderação, filtragem de denúncias por status de moderação, e verificação de auditoria de ações de administrador. A cobertura de declarações atingiu 80,23\% e a cobertura de funções atingiu 88,88\%.
 
 \section{Relatório de refatorações realizadas}
 
