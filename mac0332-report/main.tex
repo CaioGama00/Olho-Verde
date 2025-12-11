@@ -118,10 +118,103 @@ O sistema utiliza o serviço \textbf{Supabase Auth} para autenticação de usuá
 \end{figure}
 
 \section{Solução completa}
+A solução desenvolvida para o projeto \textit{Olho Verde} contempla um conjunto sólido de funcionalidades que foram implementadas de forma incremental ao longo do processo de desenvolvimento. O sistema atualmente apresenta uma versão estável, funcional e aderente à maior parte das \textit{user stories} previstas no escopo inicial.
 
-\url{https://github.com/CaioGama00/Olho-Verde}
+\subsection{Principais Funcionalidades Implementadas}
 
-\mycomment{Seria bom adicionar mais algo aqui além do link para o repositório, como uma listagem das funcionalidades implementadas e talvez alguns diagramas de UML}
+    \begin{itemize}
+        \item Sistema de autenticação (cadastro, login e logout).
+        
+        \item Gerenciamento completo das denúncias.
+        
+        \item Rotas administrativas para:
+        \begin{itemize}
+            \item Aprovar denúncias;
+            \item Rejeitar denúncias;
+            \item Atualizar status das denúncias.
+        \end{itemize}
+        
+        \item Validação dos dados enviados pelo frontend.
+    
+        \item Formulário de criação de denúncias com validação.
+        \item Lista com todas as denúncias registradas pelo usuário.
+        \item Tela de detalhes das denúncias.
+        \item Sistema de filtros por:
+        \begin{itemize}
+            \item Categoria do problema;
+            \item Status da denúncia.
+        \end{itemize}
+        \item Mapa interativo utilizando Leaflet + OpenStreetMap.
+        \item Painel administrativo para moderação.
+    \end{itemize}
+
+    \item \textbf{Fluxo Completo Atendido}
+    \begin{itemize}
+        \item Cadastro do usuário.
+        \item Login na plataforma.
+        \item Criação de denúncia.
+        \item Visualização no mapa.
+        \item Gerenciamento administrativo.
+    \end{itemize}
+
+\subsection{Capturas de Tela das Funcionalidades Implementadas}
+\newpage
+
+    \begin{figure}[h!]
+        \centering
+        \includegraphics[width=0.8\textwidth]{tela_login.png}
+        \caption{Tela de login da aplicação.}
+    \end{figure}
+    \begin{figure}[h!]
+        \centering
+        \includegraphics[width=0.8\textwidth]{minhas_denuncias.png}
+        \caption{Tela de gerenciamento das minhas denúncias}
+    \end{figure}
+
+    \begin{figure}[h!]
+        \centering
+        \includegraphics[width=0.8\textwidth]{painel_admin.png}
+        \caption{Tela de gerenciamento administrativo}
+    \end{figure}
+
+    \begin{figure}[h!]
+        \centering
+        \includegraphics[width=0.5\textwidth]{permissao.png}
+        \caption{Permissão de acesso a localização}
+    \end{figure}
+
+    \begin{figure}[h!]
+        \centering
+        \includegraphics[width=0.8\textwidth]{tela_mapa.png}
+        \caption{Tela mapa dos reports}
+    \end{figure}
+
+    \begin{figure}[h!]
+        \centering
+        \includegraphics[width=0.2\textwidth]{ferramentas.png}
+        \caption{Ferramentas de busca e recentralização}
+    \end{figure}
+
+    \begin{figure}[h!]
+        \centering
+        \includegraphics[width=0.4\textwidth]{meu_perfil.png}
+        \caption{Painel usuário}
+    \end{figure}
+
+    \begin{figure}[h!]
+        \centering
+        \includegraphics[width=0.3\textwidth]{reporte.png}
+        \caption{Painel de reporte}
+    \end{figure}
+
+    \begin{figure}[h!]
+        \centering
+        \includegraphics[width=0.3\textwidth]{ver_reporte2.png}
+        \includegraphics[width=0.3\textwidth]{ver_reporte.png}
+        \caption{Painel para ver os reportes}
+    \end{figure}
+
+\newpage
 
 \section{Plano de testes para as funcionalidades desenvolvidas}
 
