@@ -216,6 +216,89 @@ A solução desenvolvida para o projeto \textit{Olho Verde} contempla um conjunt
 
 \newpage
 
+\subsection{Testes Realizados}
+
+\begin{itemize}
+
+    \item \textbf{Testes de Serviços}
+    \begin{itemize}
+        \item Validação do upload de imagens (formato, tamanho e erros de rede).
+        \item Testes do serviço de classificação de imagens por buffer.
+        \item Validação da correspondência entre palavras-chave e categorias.
+        \item Testes com thresholds variados de classificação.
+        \item Tratamento de falhas de API externa e respostas inválidas.
+    \end{itemize}
+
+    \item \textbf{Testes de Middleware}
+    \begin{itemize}
+        \item Validação de tokens JWT (válidos, expirados e inválidos).
+        \item Verificação de permissões de administrador.
+        \item Testes de autorização e controle de acesso.
+    \end{itemize}
+
+    \item \textbf{Testes de Utilitários}
+    \begin{itemize}
+        \item Testes das funções de construção de respostas de denúncia.
+        \item Validação dos cálculos de votos positivos e negativos.
+        \item Testes de preservação de timestamps e integridade dos dados.
+        \item Testes de utilidades de perfil: extração de perfis, busca por ID e sincronização.
+        \item Tratamento de dados ausentes, deduplicação e falhas de conexão.
+    \end{itemize}
+
+    \item \textbf{Testes de Controladores}
+    \begin{itemize}
+        \item Controlador de autenticação:
+        \begin{itemize}
+            \item Registro de novos usuários;
+            \item Login e geração de tokens;
+            \item Atualização de perfil;
+            \item Redefinição e confirmação de senha;
+            \item Tratamento de usuários duplicados e credenciais inválidas.
+        \end{itemize}
+
+        \item Controlador de classificação:
+        \begin{itemize}
+            \item Fluxo completo de classificação de imagem;
+            \item Validação de categorias;
+            \item Tratamento de erros e validação de chaves de API.
+        \end{itemize}
+
+        \item Controlador de denúncia:
+        \begin{itemize}
+            \item Criação de denúncias com e sem imagens;
+            \item Operações de voto positivo e negativo;
+            \item Gerenciamento de comentários;
+            \item Filtragem de denúncias.
+        \end{itemize}
+
+        \item Controlador de administração:
+        \begin{itemize}
+            \item Aprovação e rejeição de denúncias;
+            \item Atualização de status;
+            \item Bloqueio de usuários;
+            \item Listagem administrativa.
+        \end{itemize}
+    \end{itemize}
+
+    \item \textbf{Cenários de Teste}
+    \begin{itemize}
+        \item Validação de entrada inválida e dados ausentes.
+        \item Testes com identificadores e formatos inválidos.
+        \item Falhas de banco de dados e timeouts de API.
+        \item Testes de permissões, sessões e autenticação.
+        \item Testes de integridade dos votos, categorias e timestamps.
+    \end{itemize}
+
+\end{itemize}
+
+Com isso, a solução final entregue demonstra maturidade técnica e alinhamento com os requisitos propostos, apresentando-se como uma plataforma funcional, coerente e capaz de evoluir com as próximas etapas do projeto.
+
+\subsection{Link trabalho final}
+
+\url{https://github.com/CaioGama00/Olho-Verde}
+
+\mycomment{Seria bom adicionar mais algo aqui além do link para o repositório, como uma listagem das funcionalidades implementadas e talvez alguns diagramas de UML}
+
 \section{Plano de testes para as funcionalidades desenvolvidas}
 
 O objetivo do plano de testes é garantir a qualidade e a confiabilidade do backend da plataforma Olho Verde. O foco principal é alcançar uma cobertura mínima de 80\% das funções de cada módulo do código, assegurando que as funcionalidades críticas sejam validadas de forma abrangente. Os testes deverão ser organizados para validar cenários de sucesso, erro e casos extremos.
