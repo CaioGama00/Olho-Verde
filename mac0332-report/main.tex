@@ -1,0 +1,561 @@
+\documentclass{article}
+
+% Language setting
+% Replace `english' with e.g. `spanish' to change the document language
+\usepackage[portuguese]{babel}
+
+% Set page size and margins
+% Replace `letterpaper' with `a4paper' for UK/EU standard size
+\usepackage[letterpaper,top=2cm,bottom=2cm,left=3cm,right=3cm,marginparwidth=1.75cm]{geometry}
+
+% Useful packages
+\usepackage{amsmath}
+\usepackage{float}
+\usepackage{graphicx}
+\usepackage{subcaption}
+\usepackage[export]{adjustbox}
+\usepackage[colorlinks=true, allcolors=blue]{hyperref}
+\usepackage{pmboxdraw}
+
+\newcommand{\mycomment}[1]{}
+
+\title{Entrega 3 - MAC0332}
+\author{Nome: Renan Ryu Kajihara \\
+        Nome: Caio Rodrigues Gama  \\
+        Nome: Rachel Loriato Nazareth Franco  \\
+        Nome: Felipe Kaneshiro de Souza  \\
+        Nome: Tiago Gomes Dourado de Oliveira  \\
+        Nome: Yesman Choque Mamani}
+
+\begin{document}
+\maketitle
+
+
+\begin{abstract}
+
+O presente relatório irá descrever as atividades realizadas no desenvolvimento do projeto "Olho Verde", uma plataforma web colaborativa para reporte e visualização de problemas urbanos na cidade de São Paulo. Entre os tópicos discutidos, estão: a arquitetura de software completa; a solução completa, implementada e testada; o plano de testes para as funcionalidades desenvolvidas; o relatório dos testes já realizados; o relatório de refatorações realizadas; a apresentação final com demonstração ao vivo da solução; a análise dos resultados; os desafios superados; e as futuras melhorias.
+
+\end{abstract}
+
+\newpage
+
+\tableofcontents
+
+\newpage
+
+\section{Arquitetura de software completa}
+
+Este capítulo descreve a arquitetura do sistema Olho-Verde, detalhando as tecnologias utilizadas, os componentes principais e o fluxo de dados entre eles.
+
+\subsection{Visão Geral}
+
+O sistema Olho-Verde segue uma arquitetura cliente-servidor tradicional, estruturada em camadas. O \textbf{Frontend} é uma \textit{Single Page Application} (SPA) que se comunica com o \textbf{Backend} através de uma API RESTful. O Backend, por sua vez, gerencia a lógica de negócios e interage com o banco de dados PostgreSQL, gerenciado pela plataforma Supabase.
+
+A separação clara entre cliente e servidor permite o desenvolvimento independente das interfaces e da lógica de negócios, além de facilitar a escalabilidade e manutenção do sistema.
+
+\subsection{Tecnologias Utilizadas}
+
+\subsubsection{Frontend}
+\begin{itemize}
+    \item \textbf{React (v19):} Biblioteca principal para construção da interface do usuário.
+    \item \textbf{Vite:} Ferramenta de \textit{build} e servidor de desenvolvimento, garantindo alta performance.
+    \item \textbf{Leaflet \& React-Leaflet:} Para renderização e manipulação de mapas interativos.
+    \item \textbf{Axios:} Cliente HTTP para realizar requisições à API.
+    \item \textbf{CSS Modules/Vanilla CSS:} Estilização dos componentes.
+\end{itemize}
+
+\subsubsection{Backend}
+\begin{itemize}
+    \item \textbf{Node.js:} Ambiente de execução JavaScript no servidor.
+    \item \textbf{Express:} Framework web para construção da API REST.
+    \item \textbf{Supabase Client (@supabase/supabase-js):} Biblioteca para interação com o banco de dados e serviços do Supabase.
+    \item \textbf{Supabase Auth:} Serviço gerenciado de autenticação e gestão de usuários, baseado em JWT.
+\end{itemize}
+
+\subsubsection{Banco de Dados}
+\begin{itemize}
+    \item \textbf{PostgreSQL:} Banco de dados relacional robusto, hospedado e gerenciado pelo Supabase.
+\end{itemize}
+
+\subsection{Diagrama de Containers (C4 Model)}
+
+O diagrama a seguir ilustra os principais containers do sistema e suas responsabilidades. O usuário interage com a Aplicação Web, que consome a API do Backend. O Backend processa as requisições e persiste os dados no Banco de Dados.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{images/c4_container.png}
+    \caption{Diagrama de Containers - Sistema Olho-Verde}
+    \label{fig:c4_container}
+\end{figure}
+
+\subsection{Arquitetura do Backend}
+
+O backend está organizado com foco em pragmatismo e separação de lógica complexa:
+
+\begin{enumerate}
+    \item \textbf{Routes (Rotas):} Definem os \textit{endpoints} da API e direcionam as requisições para os controladores.
+    \item \textbf{Controllers (Controladores):} Processam as requisições, realizam validações e interagem diretamente com o Supabase para operações de dados padrão.
+    \item \textbf{Services (Serviços):} Encapsulam lógicas de negócio específicas e reutilizáveis, como upload de arquivos e envio de emails.
+    \item \textbf{Data Access (Supabase):} O cliente Supabase atua como camada de acesso a dados (ORM/DAO).
+\end{enumerate}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{images/backend_architecture.png}
+    \caption{Arquitetura em Camadas do Backend}
+    \label{fig:backend_arch}
+\end{figure}
+
+\subsection{Fluxo de Autenticação}
+
+O sistema utiliza o serviço \textbf{Supabase Auth} para autenticação de usuários. O gerenciamento de sessão é realizado através de tokens JWT (JSON Web Tokens), emitidos pelo Supabase e validados pelo Backend em cada requisição protegida. O diagrama de sequência abaixo ilustra o processo.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{images/auth_sequence.png}
+    \caption{Diagrama de Sequência de Autenticação}
+    \label{fig:auth_sequence}
+\end{figure}
+
+\section{Solução completa}
+A solução desenvolvida para o projeto \textit{Olho Verde} contempla um conjunto sólido de funcionalidades que foram implementadas de forma incremental ao longo do processo de desenvolvimento. O sistema atualmente apresenta uma versão estável, funcional e aderente à maior parte das \textit{user stories} previstas no escopo inicial.
+
+\subsection{Principais Funcionalidades Implementadas}
+
+    \begin{itemize}
+        \item Sistema de autenticação (cadastro, login e logout).
+        
+        \item Gerenciamento completo das denúncias.
+        
+        \item Rotas administrativas para:
+        \begin{itemize}
+            \item Aprovar denúncias;
+            \item Rejeitar denúncias;
+            \item Atualizar status das denúncias.
+        \end{itemize}
+        
+        \item Validação dos dados enviados pelo frontend.
+    
+        \item Formulário de criação de denúncias com validação.
+        \item Lista com todas as denúncias registradas pelo usuário.
+        \item Tela de detalhes das denúncias.
+        \item Sistema de filtros por:
+        \begin{itemize}
+            \item Categoria do problema;
+            \item Status da denúncia.
+        \end{itemize}
+        \item Mapa interativo utilizando Leaflet + OpenStreetMap.
+        \item Painel administrativo para moderação.
+    \end{itemize}
+
+    \item \textbf{Fluxo Completo Atendido}
+    \begin{itemize}
+        \item Cadastro do usuário.
+        \item Login na plataforma.
+        \item Criação de denúncia.
+        \item Visualização no mapa.
+        \item Gerenciamento administrativo.
+    \end{itemize}
+
+\subsection{Capturas de Tela das Funcionalidades Implementadas}
+\newpage
+
+    \begin{figure}[h!]
+        \centering
+        \includegraphics[width=0.8\textwidth]{images/tela_login.png}
+        \caption{Tela de login da aplicação.}
+    \end{figure}
+    \begin{figure}[h!]
+        \centering
+        \includegraphics[width=0.8\textwidth]{images/minhas_denuncias.png}
+        \caption{Tela de gerenciamento das minhas denúncias}
+    \end{figure}
+
+    \begin{figure}[h!]
+        \centering
+        \includegraphics[width=0.8\textwidth]{images/painel_admin.png}
+        \caption{Tela de gerenciamento administrativo}
+    \end{figure}
+
+    \begin{figure}[h!]
+        \centering
+        \includegraphics[width=0.5\textwidth]{images/permissao.png}
+        \caption{Permissão de acesso a localização}
+    \end{figure}
+
+    \begin{figure}[h!]
+        \centering
+        \includegraphics[width=0.8\textwidth]{images/tela_mapa.png}
+        \caption{Tela mapa dos reports}
+    \end{figure}
+
+    \begin{figure}[h!]
+        \centering
+        \includegraphics[width=0.2\textwidth]{images/ferramentas.png}
+        \caption{Ferramentas de busca e recentralização}
+    \end{figure}
+
+    \begin{figure}[h!]
+        \centering
+        \includegraphics[width=0.4\textwidth]{images/meu_perfil.png}
+        \caption{Painel usuário}
+    \end{figure}
+
+    \begin{figure}[h!]
+        \centering
+        \includegraphics[width=0.3\textwidth]{images/reporte.png}
+        \caption{Painel de reporte}
+    \end{figure}
+
+    \begin{figure}[h!]
+        \centering
+        \includegraphics[width=0.3\textwidth]{images/ver_reporte2.png}
+        \includegraphics[width=0.3\textwidth]{images/ver_reporte.png}
+        \caption{Painel para ver os reportes}
+    \end{figure}
+
+\newpage
+
+\subsection{Testes Realizados}
+
+\begin{itemize}
+
+    \item \textbf{Testes de Serviços}
+    \begin{itemize}
+        \item Validação do upload de imagens (formato, tamanho e erros de rede).
+        \item Testes do serviço de classificação de imagens por buffer.
+        \item Validação da correspondência entre palavras-chave e categorias.
+        \item Testes com thresholds variados de classificação.
+        \item Tratamento de falhas de API externa e respostas inválidas.
+    \end{itemize}
+
+    \item \textbf{Testes de Middleware}
+    \begin{itemize}
+        \item Validação de tokens JWT (válidos, expirados e inválidos).
+        \item Verificação de permissões de administrador.
+        \item Testes de autorização e controle de acesso.
+    \end{itemize}
+
+    \item \textbf{Testes de Utilitários}
+    \begin{itemize}
+        \item Testes das funções de construção de respostas de denúncia.
+        \item Validação dos cálculos de votos positivos e negativos.
+        \item Testes de preservação de timestamps e integridade dos dados.
+        \item Testes de utilidades de perfil: extração de perfis, busca por ID e sincronização.
+        \item Tratamento de dados ausentes, deduplicação e falhas de conexão.
+    \end{itemize}
+
+    \item \textbf{Testes de Controladores}
+    \begin{itemize}
+        \item Controlador de autenticação:
+        \begin{itemize}
+            \item Registro de novos usuários;
+            \item Login e geração de tokens;
+            \item Atualização de perfil;
+            \item Redefinição e confirmação de senha;
+            \item Tratamento de usuários duplicados e credenciais inválidas.
+        \end{itemize}
+
+        \item Controlador de classificação:
+        \begin{itemize}
+            \item Fluxo completo de classificação de imagem;
+            \item Validação de categorias;
+            \item Tratamento de erros e validação de chaves de API.
+        \end{itemize}
+
+        \item Controlador de denúncia:
+        \begin{itemize}
+            \item Criação de denúncias com e sem imagens;
+            \item Operações de voto positivo e negativo;
+            \item Gerenciamento de comentários;
+            \item Filtragem de denúncias.
+        \end{itemize}
+
+        \item Controlador de administração:
+        \begin{itemize}
+            \item Aprovação e rejeição de denúncias;
+            \item Atualização de status;
+            \item Bloqueio de usuários;
+            \item Listagem administrativa.
+        \end{itemize}
+    \end{itemize}
+
+    \item \textbf{Cenários de Teste}
+    \begin{itemize}
+        \item Validação de entrada inválida e dados ausentes.
+        \item Testes com identificadores e formatos inválidos.
+        \item Falhas de banco de dados e timeouts de API.
+        \item Testes de permissões, sessões e autenticação.
+        \item Testes de integridade dos votos, categorias e timestamps.
+    \end{itemize}
+
+\end{itemize}
+
+Com isso, a solução final entregue demonstra maturidade técnica e alinhamento com os requisitos propostos, apresentando-se como uma plataforma funcional, coerente e capaz de evoluir com as próximas etapas do projeto.
+
+\subsection{Link trabalho final}
+
+\url{https://github.com/CaioGama00/Olho-Verde}
+
+\mycomment{Seria bom adicionar mais algo aqui além do link para o repositório, como uma listagem das funcionalidades implementadas e talvez alguns diagramas de UML}
+
+\section{Plano de testes para as funcionalidades desenvolvidas}
+
+O objetivo do plano de testes é garantir a qualidade e a confiabilidade do backend da plataforma Olho Verde. O foco principal é alcançar uma cobertura mínima de 80\% das funções de cada módulo do código, assegurando que as funcionalidades críticas sejam validadas de forma abrangente. Os testes deverão ser organizados para validar cenários de sucesso, erro e casos extremos.
+
+\subsection{Testes de Serviços}
+
+O serviço de armazenamento deverá ser validado quanto ao upload de imagens para o armazenamento cloud, a validação de formatos e tamanhos de arquivos, e o tratamento de erros relacionados a falhas de rede e arquivos inválidos.
+
+O serviço de classificação deverá ser validado quanto à classificação de imagens por buffer, à correspondência de palavras-chave com as categorias de problemas urbanos, e à aplicação de thresholds de categoria. Deverão ser considerados comportamentos com combinações variadas de predições, tratamento de falhas de API externa e respostas inválidas.
+
+\subsection{Testes de Middleware}
+
+O middleware de autenticação deverá ser validado quanto à verificação de tokens JWT, à detecção da função de administrador, e ao controle de autorização. Deverão ser testados cenários com tokens válidos, tokens expirados, permissões de administrador e permissões de usuários comuns.
+
+\subsection{Testes de Utilitários}
+
+Os utilitários de resposta deverão ser validados quanto à construção de respostas de denúncia, aos cálculos de votos, e à preservação de dados de timestamp. Devem-se considerar a estrutura correta dos dados retornados e a contagem adequada de votos.
+
+Os utilitários de perfil de usuário deverão ser validados quanto à extração de perfis a partir de dados brutos, à busca de perfis por identificadores, e à sincronização de dados entre diferentes fontes. Deverão ser considerados o tratamento de dados ausentes, a deduplicação de identificadores, a tolerância a falhas de conexão, e o mapeamento correto dos resultados.
+
+\subsection{Testes de Controladores}
+
+O controlador de autenticação deverá ser validado quanto ao registro de novos usuários, ao login com geração de tokens, à atualização de perfil, à redefinição de senha e à confirmação de redefinição de senha. Deverão ser considerados a validação de entrada, a prevenção de usuários duplicados, o tratamento de credenciais inválidas, a recuperação de conta, a sincronização de perfil com serviços externos, e o tratamento de erros de rede.
+
+O controlador de classificação deverá ser validado quanto ao fluxo completo de classificação de imagem, à validação de categorias, e ao tratamento apropriado de erros. Deverão ser considerados a correspondência correta de categorias, o tratamento de erros de API externa, a validação de chaves de API, a estrutura completa da resposta de dados, a propagação correta de dados de erro, e a compatibilidade com tipos variados de arquivo.
+
+O controlador de denúncia deverá ser validado quanto à criação de denúncias com e sem imagens, às operações de voto positivo e negativo, ao gerenciamento de comentários, e à filtragem de denúncias.
+
+O controlador de administração deverá ser validado quanto à moderação de denúncias, ao gerenciamento de status de denúncias, ao bloqueio de usuários, e à listagem administrativa de dados. Deverão ser considerados a aprovação e rejeição de denúncias, a atualização de status, e o gerenciamento de usuários.
+
+\subsection{Cenários de Teste}
+
+O tratamento de erros deverá ser validado através de casos como validação de entrada inválida, falhas de banco de dados, timeouts de API e validação de dados ausentes.
+
+Os casos extremos deverão ser testados para validar o comportamento com valores nulo ou indefinido, strings vazias, identificadores e formatos inválidos, e campos opcionais ausentes.
+
+A autenticação e autorização deverão ser validadas quanto à verificação de tokens, à confirmação de função de administrador, à verificação de permissões, e ao gerenciamento de sessões.
+
+A integridade de dados deverá ser validada quanto aos cálculos de votos, à preservação de associações de usuário, à manutenção de timestamps, e à correspondência de categorias.
+
+\section{Relatório dos testes já realizados}
+
+A suite de testes foi executada com sucesso em toda a aplicação. Um total de 159 testes foram aprovados, cobrindo controladores, serviços, middleware e utilitários. A cobertura total de funções atingiu 89,58\%, superando o objetivo mínimo de 80\%. A cobertura total de declarações alcançou 76,09\%, com foco especial em cobertura de declarações apenas para o controlador de classificação, onde se atingiu 85,29\%.
+
+\subsection{Testes de Serviços}
+
+\subsubsection{storageService}
+
+O serviço de armazenamento foi testado em 6 casos. Foram testadas: retorno nulo quando arquivo não é fornecido, upload de arquivo com retorno de fileId e publicUrl, tratamento de arquivo sem extensão, uso de "anon" quando userId não é fornecido, lançamento de erro quando upload falha, e tratamento gracioso quando publicUrl está ausente. A cobertura de declarações atingiu 100\% e a cobertura de funções atingiu 100\%.
+
+\subsubsection{classificationService}
+
+O serviço de classificação foi testado em 13 casos. Foram testadas: classificação bem-sucedida com correspondência exata de categoria, classificação sem categoria esperada, retorno nulo quando nenhuma predição atende ao threshold, respeito a thresholds específicos de categoria, envio correto de headers para API, uso de mimetype padrão quando não fornecido, tratamento de resposta não-array da API, tratamento de array vazio de predições, tratamento de erro em requisição axios, preservação de dados de erro em exceção lançada, tratamento de predições com scores ausentes, e uso de threshold padrão quando categoria não tem threshold. A cobertura de declarações atingiu 89,65\% e a cobertura de funções atingiu 100\%.
+
+\subsection{Testes de Middleware}
+
+\subsubsection{auth}
+
+O middleware de autenticação foi testado em 16 casos. Foram testadas: retorno true quando usuário tem flag de administrador em user\_metadata, retorno true quando usuário tem role de administrador em user\_metadata, retorno true quando email do usuário está em ADMIN\_EMAILS, retorno false quando usuário não é administrador, retorno false quando usuário é nulo, tratamento de array de roles, comparação case-insensitive para role, retorno nulo sem header de autorização, extração de token de header Bearer, retorno nulo com token inválido, retorno 401 sem token fornecido, definição de usuário em requisição com token válido, definição correta de flag isAdmin, retorno 401 com token inválido, definição de usuário como nulo quando getUser retorna null, e retorno 403 quando usuário não é administrador em rota protegida. A cobertura de declarações atingiu 100\% e a cobertura de funções atingiu 100\%.
+
+\subsection{Testes de Utilitários}
+
+\subsubsection{reportHelpers}
+
+O utilitário de resposta de denúncia foi testado em 8 casos. Foram testadas: construção de resposta com todos os campos obrigatórios, tratamento de denúncias com votos zerados, inclusão de URL de imagem quando disponível, tratamento de URL de imagem ausente, preservação de timestamps, tratamento de vários tipos de problema, inclusão de user\_id, e manutenção de status de moderação. A cobertura de declarações atingiu 70\% e a cobertura de funções atingiu 100\%.
+
+\subsubsection{userProfile}
+
+O utilitário de perfil de usuário foi testado em 22 casos. Foram testadas: retorno de valores nulos quando usuário é nulo, retorno de valores nulos quando usuário é indefinido, extração de nome e email de propriedades diretas do objeto usuário, extração de nome e email de raw\_user\_meta\_data, extração de nome e email de user\_metadata, priorização de propriedades diretas sobre metadata, priorização de raw\_user\_meta\_data sobre user\_metadata, retorno nulo para nome e email ausentes, tratamento de extração parcial de dados, tratamento de objetos metadata vazios, retorno de map vazio quando array de IDs de usuário está vazio, retorno de map vazio quando userIds é indefinido, deduplicação de IDs de usuário antes de fetch, fetch de perfis para múltiplos IDs únicos, filtragem de valores falsy de userIds, retorno nulo para usuário quando API retorna erro, retorno nulo para usuário quando API lança exceção, tratamento de resultados mistos de sucesso e falha, tratamento de objeto usuário sem propriedade user em data, estrutura correta do map retornado, e tratamento de array grande de IDs de usuário. A cobertura de declarações atingiu 100\% e a cobertura de funções atingiu 100\%.
+
+\subsection{Testes de Controladores}
+
+\subsubsection{authController}
+
+O controlador de autenticação foi testado em 28 casos. Foram testadas: registro bem-sucedido de novo usuário, retorno de erro quando email já existe, tratamento de erro supabase, login bem-sucedido de usuário, retorno de erro com credenciais inválidas, tratamento de erro supabase em login, retorno de erro sem email, retorno de erro sem password, atualização bem-sucedida de perfil, retorno de erro quando tentativa de atualização falha, retorno de erro sem ID de usuário em atualização, requisição bem-sucedida de reset de senha, retorno de erro quando email não existe em requisição de reset, tratamento de erro supabase em requisição de reset, confirmação bem-sucedida de reset de senha, retorno de erro com token de reset inválido, tratamento de erro supabase em confirmação de reset, validação de força de password (requisitos específicos), sugestões de mensagem de erro para password fraco, verificação de sincronização de perfil com serviços externos, tratamento de timeout de API em registro, tratamento de timeout de API em login, tratamento de timeout de API em atualização, retorno de erro quando password é identicamente igual ao anterior, sincronização correta de dados de usuário entre serviços, tratamento de identidades duplicadas, e tratamento de erro de conexão em requisições. A cobertura de declarações atingiu 85,89\% e a cobertura de funções atingiu 83,33\%.
+
+\subsubsection{classificationController}
+
+O controlador de classificação foi testado em 33 casos. Foram testadas: retorno de erro quando nenhuma imagem é fornecida, classificação bem-sucedida de imagem com categoria correspondente, retorno de erro quando nenhuma correspondência é encontrada, retorno de erro quando categoria detectada difere da esperada, tratamento de erro de serviço de classificação, tratamento de erro de chave de API inválida, retorno correto de estrutura de resposta de sucesso, retorno correto de estrutura de resposta de erro, inclusão de predição superior em resposta de sucesso, inclusão de predição superior em resposta de erro, retorno de erro com status 503 quando serviço não disponível, retorno de erro com mensagem apropriada para erro genérico de classificação, propagação de erro de timeout, ajuste de status de resposta para 422 em validação falha, ajuste de status de resposta para 503 em indisponibilidade de serviço, validação de requisição bem-formada à API de classificação, tratamento de resposta vazia da API, tratamento de array de predições vazio, tratamento de predição sem score, suporte a vários formatos de imagem (JPEG, PNG, GIF, WebP), validação de mimetype de arquivo, rejeição de arquivo não-imagem, rejeição de arquivo muito grande, rejeição de arquivo muito pequeno, verificação de log de erro em falha, verificação de log de sucesso em classificação bem-sucedida, tratamento de erro de classificação com API sobrecarregada, tratamento de erro de classificação com API em manutenção, tratamento de erro de classificação com conexão de rede instável, retorno de resposta estruturada mesmo com predições parciais, inclusão de confiança em resposta, e tratamento de erro supabase em cenário de integração completa. A cobertura de declarações atingiu 85,29\% e a cobertura de funções atingiu 66,66\%.
+
+\subsubsection{reportController}
+
+O controlador de denúncia foi testado em 17 casos. Foram testadas: retorno de todas as denúncias aprovadas, inclusão de votos de usuário quando autenticado, filtro por categoria de problema, filtro por status de denúncia, ordenação de denúncias por data, criação bem-sucedida de denúncia com imagem, criação bem-sucedida de denúncia sem imagem, retorno de erro quando problema não é fornecido, retorno de erro quando dados de localização não são fornecidos, voto positivo em denúncia, voto negativo em denúncia, prevenção de voto duplicado, retorno de erro ao tentar votar em denúncia inexistente, adição bem-sucedida de comentário, retorno de erro quando comentário está vazio, obtenção de comentários de denúncia, e filtro de denúncias por intervalo de datas. A cobertura de declarações atingiu 59,34\% e a cobertura de funções atingiu 81,81\%.
+
+\subsubsection{adminController}
+
+O controlador de administração foi testado em 16 casos. Foram testadas: retorno de todas as denúncias, tratamento de erro de banco de dados na listagem, atualização bem-sucedida de status de denúncia, validação de status válido em atualização, retorno de erro com status inválido, aprovação de denúncia pendente, rejeição de denúncia pendente, bloqueio bem-sucedido de usuário, desbloqueio bem-sucedido de usuário, listagem de usuários bloqueados, retorno de erro ao tentar bloquear usuário inexistente, retorno de erro ao tentar bloquear sem permissão, inclusão de detalhes de usuário em resposta, inclusão de histórico de moderação, filtragem de denúncias por status de moderação, e verificação de auditoria de ações de administrador. A cobertura de declarações atingiu 80,23\% e a cobertura de funções atingiu 88,88\%.
+
+\section{Relatório de refatorações realizadas}
+
+Durante o desenvolvimento do projeto, uma das principais refatorações realizadas foi a reestruturação completa da camada de backend, que inicialmente estava implementada em um único arquivo monolítico (\texttt{server.js}) contendo toda a lógica da aplicação.
+
+\subsection{Motivação}
+
+O arquivo \texttt{server.js} original concentrava diversos componentes em um único local, incluindo definição de rotas HTTP, lógica de negócio, controladores, configurações do servidor e middlewares. Essa abordagem monolítica apresentava diversos problemas:
+
+\begin{itemize}
+    \item \textbf{Baixa manutenibilidade:} dificuldade em localizar e modificar funcionalidades específicas
+    \item \textbf{Violação de princípios SOLID:} um único arquivo com múltiplas responsabilidades
+    \item \textbf{Difícil testabilidade:} componentes fortemente acoplados
+    \item \textbf{Escalabilidade comprometida:} crescimento desordenado do código
+\end{itemize}
+
+\subsection{Solução Implementada: Arquitetura MVC}
+
+Para resolver esses problemas, foi implementada uma arquitetura baseada no padrão \textbf{MVC (Model-View-Controller)}, separando as responsabilidades em camadas bem definidas:
+
+\vspace{0.3cm}
+
+\begin{itemize}
+
+\item \noindent\textbf{Controllers:} 
+
+Camada responsável por receber as requisições HTTP, validar os dados de entrada, coordenar as chamadas aos services apropriados e retornar as respostas formatadas ao cliente. Os controllers atuam como intermediários entre as rotas e a lógica de negócio, mantendo o código de orquestração isolado e reutilizável.
+
+\vspace{0.2cm}
+
+\item \noindent\textbf{Services:} 
+
+Camada que contém toda a lógica de negócio da aplicação. Os services são responsáveis por implementar as regras de negócio, processar dados, realizar validações complexas e orquestrar operações que envolvem múltiplas entidades. Esta camada é independente do protocolo HTTP, permitindo que a mesma lógica seja reutilizada em diferentes contextos.
+
+\vspace{0.2cm}
+
+\item \noindent\textbf{Routes:} 
+
+Camada que define os endpoints da API e mapeia cada rota HTTP para o controller correspondente. Essa separação permite uma visão clara de todos os endpoints disponíveis na aplicação e facilita a documentação e manutenção das rotas.
+
+\vspace{0.2cm}
+
+\item \noindent\textbf{Models:} 
+
+Camada que representa as entidades de dados e define a estrutura e o comportamento dos objetos de domínio. Os models são responsáveis pela interação com o banco de dados, definindo schemas, validações e métodos de acesso aos dados.
+
+\end{itemize}
+
+\subsection{Estrutura Resultante}
+
+A nova estrutura de diretórios do backend ficou organizada da seguinte forma:
+
+\vspace{0.3cm}
+
+\begin{center}
+\begin{minipage}{0.45\textwidth}
+\begin{verbatim}
+backend/
+├── server.js              
+├── controllers/          
+│   ├── reportController.js
+│   ├── userController.js
+│   └── ...
+├── services/             
+│   ├── reportService.js
+│   ├── userService.js
+│   └── ...
+├── routes/               
+│   ├── reportRoutes.js
+│   ├── userRoutes.js
+│   └── ...
+└── models/               
+    └── ...
+\end{verbatim}
+\end{minipage}
+\end{center}
+
+\subsection{Benefícios Obtidos}
+
+A refatoração trouxe melhorias significativas para o projeto:
+
+\begin{itemize}
+    \item \textbf{Modularização:} cada módulo possui uma responsabilidade clara e bem definida
+    \item \textbf{Manutenibilidade:} facilidade em localizar e modificar funcionalidades específicas
+    \item \textbf{Reusabilidade:} services podem ser compartilhados entre diferentes controllers
+    \item \textbf{Testabilidade:} componentes isolados facilitam a criação de testes unitários
+    \item \textbf{Colaboração:} múltiplos desenvolvedores podem trabalhar simultaneamente
+    \item \textbf{Escalabilidade:} novas funcionalidades podem ser adicionadas sem comprometer a organização
+\end{itemize}
+
+\vspace{0.3cm}
+
+\noindent Esta refatoração representa um marco importante na evolução do projeto, estabelecendo uma base sólida e profissional para o desenvolvimento futuro da plataforma Olho Verde.
+
+\section{Análise final}
+
+O desenvolvimento do projeto \textbf{Olho Verde} representa um caso de sucesso na aplicação de \textbf{práticas modernas} de engenharia de software para resolver um problema social relevante. A plataforma entregue atende aos \textbf{requisitos funcionais} definidos no escopo inicial, demonstra \textbf{qualidade técnica} através de métricas objetivas de cobertura de testes, e apresenta uma \textbf{arquitetura sustentável} que facilita a manutenção e evolução futura do sistema
+A \textbf{abordagem incremental} adotada, com entregas parciais validadas ao longo do desenvolvimento, permitiu ajustar requisitos e prioridades conforme necessário, resultando em um produto final alinhado às necessidades reais dos usuários. A separação clara de responsabilidades entre frontend e backend, aliada à adoção do \textbf{padrão MVC} no servidor, estabeleceu uma base técnica sólida que suporta tanto o \textbf{trabalho colaborativo} da equipe quanto a \textbf{escalabilidade} da solução.
+
+Os resultados obtidos, tanto em termos de funcionalidades implementadas quanto de qualidade do código, posicionam o Olho Verde como uma \textbf{plataforma viável} para implantação piloto e posterior expansão, contribuindo para o fortalecimento da \textbf{participação cidadã} e da \textbf{transparência na gestão pública urbana}.
+
+\subsection{Resultados}
+
+O projeto alcançou resultados significativos em múltiplas dimensões, demonstrando tanto a viabilidade técnica quanto o potencial de impacto social da solução proposta.
+
+\subsubsection{Funcionalidades Implementadas}
+
+Foram implementadas com sucesso todas as funcionalidades essenciais previstas no escopo inicial do projeto:
+
+\begin{itemize}
+    \item \textbf{Sistema completo de autenticação:} cadastro, login, logout, recuperação de senha e gerenciamento de perfil de usuário.
+    \item \textbf{Gerenciamento de denúncias:} criação com upload de imagens, visualização em lista e no mapa, filtros por categoria e status, sistema de comentários e votação.
+    \item \textbf{Painel administrativo:} moderação de denúncias (aprovar/rejeitar), atualização de status, gerenciamento de usuários e relatórios.
+    \item \textbf{Mapa interativo:} visualização geográfica dos problemas urbanos reportados utilizando Leaflet e OpenStreetMap, com marcadores clicáveis e informações detalhadas.
+    \item \textbf{Sistema de classificação automática:} integração com API de visão computacional para sugerir categorias baseadas nas imagens enviadas.
+\end{itemize}
+
+\subsubsection{Qualidade do Código}
+
+A qualidade técnica da implementação foi validada através de métricas objetivas:
+
+\begin{itemize}
+    \item \textbf{Cobertura de testes de 89,58\%:} superando a meta de 80\%, com 159 testes automatizados cobrindo controladores, serviços, middleware e utilitários.
+    \item \textbf{Arquitetura em camadas:} refatoração completa do backend para padrão MVC, resultando em código modular, testável e manutenível.
+    \item \textbf{Validações abrangentes:} tratamento de erros, validação de entrada de dados e mecanismos de segurança implementados em todas as rotas críticas.
+    \item \textbf{Documentação técnica:} código comentado, variáveis de ambiente documentadas e README com instruções de instalação e execução.
+\end{itemize}
+
+\subsubsection{Impacto Esperado}
+
+A plataforma Olho Verde tem potencial para gerar impactos positivos em múltiplas dimensões:
+
+\begin{itemize}
+    \item \textbf{Participação cidadã:} facilita o envolvimento dos cidadãos no monitoramento e melhoria do espaço urbano, empoderando a população para reportar problemas de forma estruturada.
+    \item \textbf{Transparência pública:} cria um registro público e georreferenciado de problemas urbanos, permitindo acompanhamento do tempo de resposta e efetividade das ações governamentais.
+    \item \textbf{Tomada de decisão baseada em dados:} fornece dados agregados e visualizações que auxiliam gestores públicos a identificar padrões, priorizar recursos e planejar intervenções.
+    \item \textbf{Engajamento comunitário:} promove a formação de comunidades locais de curadores que monitoram e validam reportes, fortalecendo o senso de pertencimento e responsabilidade coletiva.
+\end{itemize}
+
+Os resultados obtidos demonstram que o projeto atingiu um nível de maturidade adequado para implantação piloto em um bairro ou região específica, com potencial de evolução e expansão gradual para outras áreas da cidade.
+
+\subsection{Desafios superados}
+
+Superamos vários desafios ao longo do projeto tanto no backend quanto no frontend. 
+
+A integração com APIs externas (OpenStreetMap para mapas, HuggingFace para classificação e Supabase para banco/armazenamento) exigiu desenhar camadas de abstração, variáveis de ambiente bem documentadas e mecanismos de fallback para casos de falha ou latência.
+
+Para o problema de CORS e distribuição de imagens implementamos um endpoint image-proxy que garante entrega segura das imagens para o frontend e evita exposições diretas de URLs. 
+
+A classificação automática de imagens usando modelos gratuitos do Hugging Face apresentou baixa acurácia. Para mitigar esse problema, implementamos uma página administrativa que permite a revisão e aprovação/reprovação manual de reports por usuários autorizados, garantindo maior confiabilidade dos dados publicados.
+
+Em segurança, desenvolvemos autenticação baseada em JWT, tratamento de tokens expirados e fluxo de recuperação de senha por e-mail com links seguros. 
+
+Para garantir qualidade, foi construída uma suite de testes abrangente (controladores, serviços, middleware e utilitários) com mocks das integrações externas. 
+
+Dados esses desafios, as principais conquistas do projeto são:
+
+\begin{itemize}
+    \item \textbf{Integração confiável com Supabase e OpenStreetMap:} implementamos camadas de abstração, configuração via variáveis de ambiente e tratamento de erros para garantir operações robustas com o banco/armazenamento e os serviços de mapas.
+    \item \textbf{Endpoint \texttt{image-proxy} e validações de upload:} criamos um endpoint proxy para mitigar problemas de CORS, adicionamos validações de tipo e tamanho de arquivo e padronizamos o armazenamento seguro em Supabase Storage.
+    \item \textbf{Middleware de autenticação e permissões administrativas:} implementamos autenticação baseada em JWT, verificação de privilégios de administrador e rotas protegidas para ações críticas de moderação e auditoria.
+    \item \textbf{Suite de testes automatizados e documentação de variáveis de ambiente:} utilizamos Jest para testes de controladores, serviços, middleware e utilitários, além de documentar variáveis essenciais.
+\end{itemize}
+
+\subsection{Futuras melhorias}
+
+A próxima etapa do projeto contempla a adoção de uma solução de classificação de imagens mais robusta, seja por meio da utilização de modelos pagos disponíveis no Hugging Face com endpoints privados e suporte a fine-tuning, seja por meio de IAs multimodais comerciais com capacidade vision+language. A migração para modelos de maior qualidade permitirá aumentar a acurácia das predições, reduzir a necessidade de intervenção manual e processar dados em escala com níveis de serviço mais previsíveis. 
+
+Para ampliar o engajamento dos usuários e melhorar a qualidade dos dados coletados, propõe-se a implementação de um sistema de gamificação dos reports. Nesse sistema, usuários que submeterem denúncias confirmadas por moderadores ou que contribuírem com comentários de alta qualidade receberão pontos, distintivos e níveis de reputação. Esses méritos poderão ser convertidos em privilégios, por exemplo, maior peso em validações, acesso antecipado a filas de moderação ou reconhecimentos públicos nos dashboards, ao mesmo tempo em que mecanismos de rate‑limiting, validações automáticas e auditorias por amostragem evitarão abusos e garantirão a integridade das recompensas.
+
+A sustentabilidade do projeto também depende da construção de uma comunidade ativa de colaboradores e curadores. Para isso, propomos a criação de um painel dedicado a moderadores, documentação de onboarding, treinamentos periódicos e canais de comunicação (ex.: Discord/Slack) para coordenação local. A comunidade terá papel central revisão e organização de campanhas regionais em parceria com associações de bairro, ONGs e órgãos governamentais.
+
+\end{document}
